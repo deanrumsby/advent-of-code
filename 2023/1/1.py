@@ -4,6 +4,7 @@ with open("input.txt", "r") as file:
     lines = file.read().splitlines()
 
 # Part 1
+
 total = 0
 
 for line in lines:
