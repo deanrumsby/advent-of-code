@@ -29,4 +29,4 @@ for id, card in enumerate(cards):
 
 
 print(f"Part 1: The scratchcards are worth {total_points} points in total")
-print(f"Part 2: We end up with {total_cards} scratcards in total")
+print(f"Part 2: We end up with {total_cards} scratchcards in total")
