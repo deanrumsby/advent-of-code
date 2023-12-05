@@ -39,7 +39,7 @@ for line in lines:
     mixed_digits = re.findall(
         r"(?=(\d|one|two|three|four|five|six|seven|eight|nine))", line
     )  # using capture group inside positive lookahead regex pattern to collect overlapping matches
-    digits = list(map(replace_worded_number, mixed_digits))
+    digits = [replace_worded_number(md) for md in mixed_digits]
     calibration_value = int(f"{digits[0]}{digits[-1]}")
     new_total += calibration_value
 

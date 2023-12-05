@@ -8,9 +8,9 @@ card_counts = {id: 1 for id in range(len(cards))}
 total_cards = 0
 
 for id, card in enumerate(cards):
-    player_numbers, winning_numbers = list(
-        map(lambda s: [int(char) for char in s.split()], card[9:].split("|"))
-    )
+    player_numbers, winning_numbers = [
+        [int(char) for char in s.split()] for s in card[9:].split("|")
+    ]
 
     # Part 1
     winning = 0
