@@ -1,5 +1,5 @@
-with open("input.txt", "r") as file:
-    directions = file.read()
+# Advent of Code 2015
+# Day 1
 
 
 def change_floor(floor, direction):
@@ -12,17 +12,36 @@ def change_floor(floor, direction):
             return floor
 
 
-BASEMENT = -1
-floor = 0
-basement_position = None
+# To what floor do the instructions take Santa?
+def part1():
+    with open("input.txt", "r") as file:
+        directions = file.read()
+
+    floor = 0
+
+    for direction in directions:
+        floor = change_floor(floor, direction)
+
+    return floor
 
 
-for index, direction in enumerate(directions):
-    floor = change_floor(floor, direction)
+# What is the position of the character that causes Santa to first enter the
+# basement?
+def part2():
+    with open("input.txt", "r") as file:
+        directions = file.read()
 
-    if basement_position == None and floor == BASEMENT:
-        basement_position = index + 1
+    floor = 0
+    BASEMENT = -1
+
+    for index, direction in enumerate(directions):
+        floor = change_floor(floor, direction)
+
+        if floor == BASEMENT:
+            return index + 1
+
+    return None
 
 
-print(f"Part 1: Santa is directed to floor {floor}")
-print(f"Part 2: Santa first enters the basement at position {basement_position}")
+print(f"Part 1: Santa is directed to floor {part1()}")
+print(f"Part 2: Santa first enters the basement at position {part2()}")

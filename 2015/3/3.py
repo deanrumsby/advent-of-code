@@ -1,5 +1,5 @@
-with open("input.txt", "r") as file:
-    instructions = file.read()
+# Advent of Code 2015
+# Day 3
 
 
 class Santa:
@@ -27,26 +27,38 @@ class Santa:
         return set(self.history)
 
 
-santa = Santa()
+# How many houses receive at least one present?
+def part1():
+    with open("input.txt", "r") as file:
+        instructions = file.read()
 
-for instruction in instructions:
-    santa.move(instruction)
-
-unique_houses = santa.unique_locations()
-
-print(f"Part 1: Santa delivered presents to {len(unique_houses)} different houses")
-
-santa = Santa()
-robo_santa = Santa()
-
-for index, instruction in enumerate(instructions):
-    if index % 2 == 0:
+    santa = Santa()
+    for instruction in instructions:
         santa.move(instruction)
-    else:
-        robo_santa.move(instruction)
 
-unique_houses = santa.unique_locations().union(robo_santa.unique_locations())
+    unique_houses = santa.unique_locations()
 
-print(
-    f"Part 2: Santa and Robo Santa delivered presents to {len(unique_houses)} different houses"
-)
+    return len(unique_houses)
+
+
+# This year, how many houses receive at least one present?
+def part2():
+    with open("input.txt", "r") as file:
+        instructions = file.read()
+
+    santa = Santa()
+    robo_santa = Santa()
+
+    for index, instruction in enumerate(instructions):
+        if index % 2 == 0:
+            santa.move(instruction)
+        else:
+            robo_santa.move(instruction)
+
+    unique_houses = santa.unique_locations().union(robo_santa.unique_locations())
+
+    return len(unique_houses)
+
+
+print(f"Part 1: Santa delivered presents to {part1()} different houses")
+print(f"Part 2: Santa and Robo Santa delivered presents to {part2()} different houses")
