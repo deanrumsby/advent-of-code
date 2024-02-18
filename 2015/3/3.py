@@ -48,12 +48,14 @@ def part2():
 
     santa = Santa()
     robo_santa = Santa()
+    should_move_santa = True
 
-    for index, instruction in enumerate(instructions):
-        if index % 2 == 0:
+    for instruction in instructions:
+        if should_move_santa:
             santa.move(instruction)
         else:
             robo_santa.move(instruction)
+        should_move_santa = not should_move_santa
 
     unique_houses = santa.unique_locations().union(robo_santa.unique_locations())
 
