@@ -97,7 +97,9 @@ def part2():
     return lights.total_brightness()
 
 
-# Shared classes
+################################################################################
+## Shared classes
+################################################################################
 
 
 class Instruction:
@@ -164,7 +166,9 @@ class SubGrid:
                 self.parent.lights[x][y] = func(self.parent.lights[x][y])
 
 
-# Print solutions
+################################################################################
+## Print answers
+################################################################################
 
 print(f"Part 1: There are {part1()} lights lit after following the instructions")
 print(f"Part 2: The total brightness is {part2()} after following the instructions")
