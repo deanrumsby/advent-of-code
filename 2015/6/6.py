@@ -4,6 +4,10 @@
 
 import re
 
+################################################################################
+## Solutions
+################################################################################
+
 
 # Because your neighbors keep defeating you in the holiday house decorating
 # contest year after year, you've decided to deploy one million lights in a
