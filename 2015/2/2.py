@@ -113,7 +113,7 @@ class Present(Box):
 
 
 ################################################################################
-## Print answers
+## Answers
 ################################################################################
 
 print(f"Part 1: The elves need to order {part1()} square feet of wrapping paper")
