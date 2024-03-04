@@ -27,18 +27,15 @@
 # All numbers in the elves' list are in feet. How many total square feet of
 # wrapping paper should they order?
 #
-def part1():
-    def calc_wrapping_paper_needed(box):
-        return box.surface_area() + box.smallest_side()
-
+def part1() -> int:
     with open("input.txt") as file:
         dimensions = file.read().splitlines()
 
     wrapping_paper = 0
 
     for dims in dimensions:
-        box = Box.from_string(dims)
-        wrapping_paper += calc_wrapping_paper_needed(box)
+        present = Present.from_string(dims)
+        wrapping_paper += present.wrapping_paper_needed()
 
     return wrapping_paper
 
@@ -62,24 +59,21 @@ def part1():
 #
 # How many total feet of ribbon should they order?
 #
-def part2():
-    def calc_ribbon_needed(box):
-        return box.volume() + box.smallest_perimeter()
-
+def part2() -> int:
     with open("input.txt") as file:
         dimensions = file.read().splitlines()
 
     ribbon = 0
 
     for dims in dimensions:
-        box = Box.from_string(dims)
-        ribbon += calc_ribbon_needed(box)
+        present = Present.from_string(dims)
+        ribbon += present.ribbon_needed()
 
     return ribbon
 
 
 ################################################################################
-## Shared classes
+## Classes
 ################################################################################
 
 
@@ -94,17 +88,28 @@ class Box:
         w, l, h = [int(x) for x in dims_as_string.split("x")]
         return cls(w, l, h)
 
-    def surface_area(self):
+    def surface_area(self) -> int:
         return (2 * self.w * self.h) + (2 * self.w * self.l) + (2 * self.h * self.l)
 
-    def volume(self):
+    def volume(self) -> int:
         return self.w * self.l * self.h
 
-    def smallest_side(self):
+    def smallest_side(self) -> int:
         return min(self.w * self.h, self.w * self.l, self.h * self.l)
 
-    def smallest_perimeter(self):
+    def smallest_perimeter(self) -> int:
         return min(2 * (self.w + self.h), 2 * (self.w + self.l), 2 * (self.h + self.l))
+
+
+class Present(Box):
+    def __init__(self, width, length, height):
+        super().__init__(width, length, height)
+
+    def wrapping_paper_needed(self) -> int:
+        return self.surface_area() + self.smallest_side()
+
+    def ribbon_needed(self) -> int:
+        return self.volume() + self.smallest_perimeter()
 
 
 ################################################################################
