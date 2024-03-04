@@ -21,7 +21,7 @@ I prefer to keep my functions [pure](https://en.wikipedia.org/wiki/Pure_function
 so I will also pass in the current floor value.
 
 ```python
-def change_floor(floor, instruction):
+def change_floor(floor: int, instruction: str):
     match instruction:
         case "(":
             return floor + 1
@@ -48,7 +48,7 @@ for instruction in instructions:
 Putting it all together gives us a function that returns the answer for part 1.
 
 ```python
-def part1():
+def part1() -> int:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
@@ -82,7 +82,7 @@ it is so useful to keep functions pure.
 So our solution for part 2 looks like...
 
 ```python
-def part2():
+def part2() -> int | None:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
