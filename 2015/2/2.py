@@ -35,7 +35,7 @@ def part1() -> int:
 
     for dims in dimensions:
         present = Present.from_string(dims)
-        wrapping_paper += present.wrapping_paper_needed()
+        wrapping_paper += present.wrapping_paper()
 
     return wrapping_paper
 
@@ -67,7 +67,7 @@ def part2() -> int:
 
     for dims in dimensions:
         present = Present.from_string(dims)
-        ribbon += present.ribbon_needed()
+        ribbon += present.ribbon()
 
     return ribbon
 
@@ -105,10 +105,10 @@ class Present(Box):
     def __init__(self, width, length, height):
         super().__init__(width, length, height)
 
-    def wrapping_paper_needed(self) -> int:
+    def wrapping_paper(self) -> int:
         return self.surface_area() + self.smallest_side()
 
-    def ribbon_needed(self) -> int:
+    def ribbon(self) -> int:
         return self.volume() + self.smallest_perimeter()
 
 
