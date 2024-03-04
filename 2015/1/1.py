@@ -28,7 +28,7 @@
 #
 # To what floor do the instructions take Santa?
 #
-def part1():
+def part1() -> int:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
@@ -52,7 +52,7 @@ def part1():
 # What is the position of the character that causes Santa to first enter
 # the basement?
 #
-def part2():
+def part2() -> int | None:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
@@ -73,7 +73,7 @@ def part2():
 ################################################################################
 
 
-def change_floor(floor, instruction):
+def change_floor(floor: int, instruction: str) -> int:
     match instruction:
         case "(":
             return floor + 1
