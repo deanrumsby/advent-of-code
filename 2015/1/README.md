@@ -21,7 +21,7 @@ I prefer to keep my functions [pure](https://en.wikipedia.org/wiki/Pure_function
 so I will also pass in the current floor value.
 
 ```python
-def change_floor(floor: int, instruction: str):
+def change_floor(floor: int, instruction: str) -> int:
     match instruction:
         case "(":
             return floor + 1
