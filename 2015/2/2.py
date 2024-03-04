@@ -78,32 +78,32 @@ def part2() -> int:
 
 
 class Box:
-    def __init__(self, width, length, height):
-        self.w = width
+    def __init__(self, length, width, height):
         self.l = length
+        self.w = width
         self.h = height
 
     @classmethod
-    def from_string(cls, dims_as_string):
-        w, l, h = [int(x) for x in dims_as_string.split("x")]
-        return cls(w, l, h)
+    def from_string(cls, dims: str):
+        l, w, h = (int(x) for x in dims.split("x"))
+        return cls(l, w, h)
 
     def surface_area(self) -> int:
-        return (2 * self.w * self.h) + (2 * self.w * self.l) + (2 * self.h * self.l)
+        return (2 * self.l * self.w) + (2 * self.w * self.h) + (2 * self.l * self.h)
 
     def volume(self) -> int:
-        return self.w * self.l * self.h
+        return self.l * self.w * self.h
 
     def smallest_side(self) -> int:
-        return min(self.w * self.h, self.w * self.l, self.h * self.l)
+        return min(self.l * self.w, self.w * self.h, self.l * self.h)
 
     def smallest_perimeter(self) -> int:
-        return min(2 * (self.w + self.h), 2 * (self.w + self.l), 2 * (self.h + self.l))
+        return min(2 * (self.l + self.w), 2 * (self.w + self.h), 2 * (self.l + self.h))
 
 
 class Present(Box):
-    def __init__(self, width, length, height):
-        super().__init__(width, length, height)
+    def __init__(self, length, width, height):
+        super().__init__(length, width, height)
 
     def wrapping_paper(self) -> int:
         return self.surface_area() + self.smallest_side()
