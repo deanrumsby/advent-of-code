@@ -3,7 +3,7 @@
 # Author: Dean Rumsby
 
 ################################################################################
-## Solutions
+# Solutions
 ################################################################################
 
 
@@ -30,12 +30,12 @@
 #
 def part1():
     with open("input.txt", "r") as file:
-        directions = file.read()
+        instructions = file.read()
 
     floor = 0
 
-    for direction in directions:
-        floor = change_floor(floor, direction)
+    for instruction in instructions:
+        floor = change_floor(floor, instruction)
 
     return floor
 
@@ -54,13 +54,13 @@ def part1():
 #
 def part2():
     with open("input.txt", "r") as file:
-        directions = file.read()
+        instructions = file.read()
 
     floor = 0
     BASEMENT = -1
 
-    for index, direction in enumerate(directions):
-        floor = change_floor(floor, direction)
+    for index, instruction in enumerate(instructions):
+        floor = change_floor(floor, instruction)
 
         if floor == BASEMENT:
             return index + 1
@@ -69,12 +69,12 @@ def part2():
 
 
 ################################################################################
-## Shared functions
+# Shared functions and classes
 ################################################################################
 
 
-def change_floor(floor, direction):
-    match direction:
+def change_floor(floor, instruction):
+    match instruction:
         case "(":
             return floor + 1
         case ")":
@@ -84,7 +84,7 @@ def change_floor(floor, direction):
 
 
 ################################################################################
-## Print answers
+# Answers
 ################################################################################
 
 print(f"Part 1: Santa is directed to floor {part1()}")
