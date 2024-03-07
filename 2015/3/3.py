@@ -30,7 +30,7 @@
 #
 # How many houses receive at least one present?
 #
-def part1():
+def part1() -> int:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
@@ -61,7 +61,7 @@ def part1():
 # - ^v^v^v^v^v now delivers presents to 11 houses, with Santa going one direction and
 #   Robo-Santa going the other.
 #
-def part2():
+def part2() -> int:
     with open("input.txt", "r") as file:
         instructions = file.read()
 
@@ -82,7 +82,7 @@ def part2():
 
 
 ################################################################################
-## Shared classes
+## Classes
 ################################################################################
 
 
@@ -94,7 +94,7 @@ class Santa:
 
         self.history.append((self.x, self.y))
 
-    def move(self, instruction):
+    def move(self, instruction: str) -> None:
         match instruction:
             case "^":
                 self.y += 1
@@ -107,12 +107,12 @@ class Santa:
 
         self.history.append((self.x, self.y))
 
-    def unique_locations(self):
+    def unique_locations(self) -> set[tuple[int, int]]:
         return set(self.history)
 
 
 ################################################################################
-## Print answers
+## Answers
 ################################################################################
 
 print(f"Part 1: Santa delivered presents to {part1()} different houses")
