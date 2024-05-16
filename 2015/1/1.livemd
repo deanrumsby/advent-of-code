@@ -6,7 +6,7 @@ Mix.install([
 ])
 ```
 
-## Solution
+## Input
 
 ```elixir
 input = Kino.Input.textarea("Please paste your puzzle input:")
