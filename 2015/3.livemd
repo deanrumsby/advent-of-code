@@ -1,0 +1,52 @@
+# Day 3: Perfectly Spherical Houses in a Vacuum
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+We can use `Stream.transform/2` here to transform our list of directions into a stream that contains the coordinates of Santa after following each direction.
+Once we have this stream we just need to add the initial position of `{0, 0}` and then count the unique entries to derive our answer.
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.graphemes()
+|> Stream.transform({0, 0}, fn
+  ">", {x, y} -> {[{x + 1, y}], {x + 1, y}}
+  "v", {x, y} -> {[{x, y - 1}], {x, y - 1}}
+  "<", {x, y} -> {[{x - 1, y}], {x - 1, y}}
+  "^", {x, y} -> {[{x, y + 1}], {x, y + 1}}
+end)
+|> Stream.concat([{0, 0}])
+|> Stream.uniq()
+|> Enum.count()
+```
+
+## Part 2
+
+Adding Robo-Santa doesn't change our code too much. In our transform we now track two sets of coordinates as the accumulator, and in each successive call we rotate the two sets of coordinates, so that our transform only affects one Santa at a time.
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.graphemes()
+|> Stream.transform({{0, 0}, {0, 0}}, fn
+  ">", {{x, y}, next} -> {[{x + 1, y}], {next, {x + 1, y}}}
+  "v", {{x, y}, next} -> {[{x, y - 1}], {next, {x, y - 1}}}
+  "<", {{x, y}, next} -> {[{x - 1, y}], {next, {x - 1, y}}}
+  "^", {{x, y}, next} -> {[{x, y + 1}], {next, {x, y + 1}}}
+end)
+|> Stream.concat([{0, 0}])
+|> Stream.uniq()
+|> Enum.count()
+```
