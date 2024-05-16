@@ -1,0 +1,73 @@
+# Day 2: I Was Told There Would Be No Math
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def parse_dimensions(str) do
+    str
+    |> String.split("x")
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  def wrapping_paper_required(l, w, h) do
+    surface_area(l, w, h) + smallest_side_area(l, w, h)
+  end
+
+  defp surface_area(l, w, h), do: 2 * l * w + 2 * l * h + 2 * w * h
+  defp smallest_side_area(l, w, h), do: Enum.min([l * w, l * h, w * h])
+end
+```
+
+```elixir
+import Part1
+
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&Part1.parse_dimensions/1)
+|> Stream.map(fn args -> apply(&wrapping_paper_required/3, args) end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def parse_dimensions(str) do
+    str
+    |> String.split("x")
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  def ribbon_required(l, w, h) do
+    volume(l, w, h) + smallest_perimeter(l, w, h)
+  end
+
+  defp volume(l, w, h), do: l * w * h
+  defp smallest_perimeter(l, w, h), do: Enum.min([2 * (l + w), 2 * (l + h), 2 * (w + h)])
+end
+```
+
+```elixir
+import Part2
+
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&Part2.parse_dimensions/1)
+|> Stream.map(fn args -> apply(&ribbon_required/3, args) end)
+|> Enum.sum()
+```

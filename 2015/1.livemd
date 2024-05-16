@@ -28,16 +28,17 @@ end)
 
 ## Part 2
 
-To find the position at which Santa enters the basement, we iterate again through all of the instructions, but this time we keep count of both the current floor number and the position. 
+To find the position at which Santa enters the basement, we iterate again through all of the instructions, but this time we include the current index, so that we can track both position and the current floor. 
 As soon as Santa enters the basement we can halt the iteration and return the position.
 
 ```elixir
 input
 |> Kino.Input.read()
 |> String.graphemes()
-|> Enum.reduce_while({0, 0}, fn
-  _, {-1, position} -> {:halt, position}
-  "(", {floor, position} -> {:cont, {floor + 1, position + 1}}
-  ")", {floor, position} -> {:cont, {floor - 1, position + 1}}
+|> Stream.with_index()
+|> Enum.reduce_while(0, fn
+  {_, position}, -1 -> {:halt, position}
+  {"(", _}, floor -> {:cont, floor + 1}
+  {")", _}, floor -> {:cont, floor - 1}
 end)
 ```
