@@ -1,0 +1,41 @@
+# Day 4: The Ideal Stocking Stuffer
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+The strategy is simple for this problem. We create an infinite stream of inputs, mapping them them to the MD5 hash whilst also keeping the index. Then we enumerate by searching for the first hash with five zeroes.
+
+```elixir
+secret = Kino.Input.read(input)
+
+Stream.unfold(1, fn i -> {secret <> Integer.to_string(i), i + 1} end)
+|> Stream.map(fn str -> Base.encode16(:crypto.hash(:md5, str)) end)
+|> Stream.with_index(1)
+|> Enum.find(fn {hash, _} -> String.starts_with?(hash, "00000") end)
+|> elem(1)
+```
+
+## Part 2
+
+This follows the exact same method as part 1, except we search for the first entry with six zeroes. This enumeration took a handful of seconds on my machine.
+
+```elixir
+secret = Kino.Input.read(input)
+
+Stream.unfold(1, fn i -> {secret <> Integer.to_string(i), i + 1} end)
+|> Stream.map(fn str -> Base.encode16(:crypto.hash(:md5, str)) end)
+|> Stream.with_index(1)
+|> Enum.find(fn {hash, _} -> String.starts_with?(hash, "000000") end)
+|> elem(1)
+```

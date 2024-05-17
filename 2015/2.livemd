@@ -12,16 +12,26 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Part 1
+## Shared Code
+
+In both parts of this problem we will be parsing the input in exactly the same way. We take a string of dimensions eg `15x111x2` and parse it into a list of integers `[15, 111, 2]`. We can then use this list as arguments for calculating the various properties we need.
 
 ```elixir
-defmodule Part1 do
+defmodule Day2 do
   def parse_dimensions(str) do
     str
     |> String.split("x")
     |> Enum.map(&String.to_integer/1)
   end
+end
+```
 
+## Part 1
+
+We start part 1 by reading and parsing the puzzle input as mentioned above. We map the parsed input into an stream of integers representing the wrapping paper required for each present and then take the sum.
+
+```elixir
+defmodule Part1 do
   def wrapping_paper_required(l, w, h) do
     surface_area(l, w, h) + smallest_side_area(l, w, h)
   end
@@ -32,26 +42,23 @@ end
 ```
 
 ```elixir
+import Day2
 import Part1
 
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Stream.map(&Part1.parse_dimensions/1)
+|> Stream.map(&parse_dimensions/1)
 |> Stream.map(fn args -> apply(&wrapping_paper_required/3, args) end)
 |> Enum.sum()
 ```
 
 ## Part 2
 
+For part 2 we are concerned with the ribbon needed for each present, so we swap out our map with our new rule, but otherwise the logic remains the same as in part 1.
+
 ```elixir
 defmodule Part2 do
-  def parse_dimensions(str) do
-    str
-    |> String.split("x")
-    |> Enum.map(&String.to_integer/1)
-  end
-
   def ribbon_required(l, w, h) do
     volume(l, w, h) + smallest_perimeter(l, w, h)
   end
@@ -62,12 +69,13 @@ end
 ```
 
 ```elixir
+import Day2
 import Part2
 
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Stream.map(&Part2.parse_dimensions/1)
+|> Stream.map(&parse_dimensions/1)
 |> Stream.map(fn args -> apply(&ribbon_required/3, args) end)
 |> Enum.sum()
 ```
