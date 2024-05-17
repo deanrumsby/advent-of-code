@@ -1,0 +1,61 @@
+# Day 5: Doesn't He Have Intern-Elves For This?
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+Another problem that is simple in premise. We will define the rules each string needs to adhere to using regex and then count them up to find our answer.
+
+```elixir
+defmodule Part1 do
+  def nice_string?(str) do
+    contains_three_vowels?(str) and
+      contains_double_letter?(str) and
+      not contains_illegal_substring?(str)
+  end
+
+  defp contains_three_vowels?(str), do: Regex.match?(~r/(.*(a|e|i|o|u).*){3}/, str)
+  defp contains_double_letter?(str), do: Regex.match?(~r/(\w)\1/, str)
+  defp contains_illegal_substring?(str), do: Regex.match?(~r/(ab|cd|pq|xy)/, str)
+end
+```
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Enum.count(&Part1.nice_string?(&1))
+```
+
+## Part 2
+
+We can use the same strategy for part 2. We define the new rules and count like before.
+
+```elixir
+defmodule Part2 do
+  def nice_string?(str) do
+    contains_pair_twice?(str) and
+      contains_repeat_with_letter_between?(str)
+  end
+
+  defp contains_pair_twice?(str), do: Regex.match?(~r/(\w\w).*(\1)/, str)
+  defp contains_repeat_with_letter_between?(str), do: Regex.match?(~r/(\w)\w(\1)/, str)
+end
+```
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Enum.count(&Part2.nice_string?(&1))
+```
