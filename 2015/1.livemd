@@ -27,8 +27,6 @@ defmodule Part1 do
 end
 ```
 
-
-
 ```elixir
 input
 |> Kino.Input.read()

@@ -14,7 +14,7 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-Another problem that is simple in premise. We will define the rules each string needs to adhere to using regex and then count them up to find our answer.
+We can define functions to check each of the given rules through the use `String.match?/2`. The problem then reduces to counting up the strings that pass each of the checks. Luckily for us, `Enum.count/2` allows us to filter out the successful matches by passing in a function to run on each element, providing us with the answer.
 
 ```elixir
 defmodule Part1 do
@@ -24,9 +24,9 @@ defmodule Part1 do
       not contains_illegal_substring?(str)
   end
 
-  defp contains_three_vowels?(str), do: Regex.match?(~r/(.*(a|e|i|o|u).*){3}/, str)
-  defp contains_double_letter?(str), do: Regex.match?(~r/(\w)\1/, str)
-  defp contains_illegal_substring?(str), do: Regex.match?(~r/(ab|cd|pq|xy)/, str)
+  defp contains_three_vowels?(str), do: String.match?(str, ~r/(.*(a|e|i|o|u).*){3}/)
+  defp contains_double_letter?(str), do: String.match?(str, ~r/(\w)\1/)
+  defp contains_illegal_substring?(str), do: String.match?(str, ~r/(ab|cd|pq|xy)/)
 end
 ```
 
@@ -39,7 +39,7 @@ input
 
 ## Part 2
 
-We can use the same strategy for part 2. We define the new rules and count like before.
+We can use the same strategy for part 2. We define the new rules and count up all the matching strings.
 
 ```elixir
 defmodule Part2 do
@@ -48,8 +48,8 @@ defmodule Part2 do
       contains_repeat_with_letter_between?(str)
   end
 
-  defp contains_pair_twice?(str), do: Regex.match?(~r/(\w\w).*(\1)/, str)
-  defp contains_repeat_with_letter_between?(str), do: Regex.match?(~r/(\w)\w(\1)/, str)
+  defp contains_pair_twice?(str), do: String.match?(str, ~r/(\w\w).*(\1)/)
+  defp contains_repeat_with_letter_between?(str), do: String.match?(str, ~r/(\w)\w(\1)/)
 end
 ```
 

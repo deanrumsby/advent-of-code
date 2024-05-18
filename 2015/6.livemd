@@ -1,0 +1,100 @@
+# Day 6: Probably a Fire Hazard
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+defmodule LightGrid do
+  def new(start_value, updater) do
+    Map.new(for i <- 0..999, j <- 0..999, do: {{i, j}, start_value})
+    |> Map.put(:updater, updater)
+  end
+
+  def instruct(grid, instruction) do
+    {type, start, finish} = instruction
+
+    subgrid(start, finish)
+    |> Enum.reduce(grid, &Map.update!(&2, &1, &2.updater.(type)))
+  end
+
+  defp subgrid(start, finish) do
+    {{x0, y0}, {x1, y1}} = {start, finish}
+    for i <- x0..x1, j <- y0..y1, do: {i, j}
+  end
+end
+```
+
+```elixir
+defmodule InstParser do
+  def parse(str) do
+    pattern = ~r/(turn on|turn off|toggle) (\d+,\d+) through (\d+,\d+)/
+    [inst_type, start, finish] = Regex.run(pattern, str, capture: :all_but_first)
+    {String.to_atom(inst_type), parse_tuple(start), parse_tuple(finish)}
+  end
+
+  defp parse_tuple(str) do
+    String.split(str, ",")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
+  end
+end
+```
+
+```elixir
+defmodule Part1 do
+  def updater(inst_type) do
+    case inst_type do
+      :"turn on" -> fn _ -> true end
+      :"turn off" -> fn _ -> false end
+      :toggle -> fn state -> !state end
+    end
+  end
+
+  def light_on?(light), do: light == true
+end
+```
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&InstParser.parse/1)
+|> Enum.reduce(LightGrid.new(false, &Part1.updater/1), &LightGrid.instruct(&2, &1))
+|> Map.delete(:updater)
+|> Map.values()
+|> Enum.count(&Part1.light_on?/1)
+```
+
+```elixir
+defmodule Part2 do
+  def updater(inst_type) do
+    case inst_type do
+      :"turn on" -> fn state -> state + 1 end
+      :"turn off" -> fn state -> if(state > 0, do: state - 1, else: 0) end
+      :toggle -> fn state -> state + 2 end
+    end
+  end
+end
+```
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&InstParser.parse/1)
+|> Enum.reduce(LightGrid.new(0, &Part2.updater/1), &LightGrid.instruct(&2, &1))
+|> Map.delete(:updater)
+|> Map.values()
+|> Enum.sum()
+```
