@@ -14,7 +14,7 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-We start by creating a stream of parsed dimensions by splitting on newline characters and then processing each individual string of dimensions. I have created `Part1.parse_dimensions/1` for this purpose - it takes a string such as `"10x5x443"` and returns a the list `[10, 5, 443]`. By mapping the dimensions to this list form we can then use `Kernel.apply/2` to use the dimensions as arguments for our function `Part1.wrapping_paper_required/3`. This leaves us with a stream of values corresponding to the wrapping paper needed for each present, which when summed results in our answer.
+We start by creating a stream of parsed dimensions by splitting on newline characters and then processing each individual string of dimensions. I have created `Part1.parse_dimensions/1` for this purpose - it takes a string such as `"10x5x443"` and returns the list `[10, 5, 443]`. By mapping the dimensions to this list form we can then use `Kernel.apply/2` to use the dimensions as arguments for our function `Part1.wrapping_paper_required/3`. This leaves us with a stream of values corresponding to the wrapping paper needed for each present, which when summed results in our answer.
 
 ```elixir
 defmodule Part1 do

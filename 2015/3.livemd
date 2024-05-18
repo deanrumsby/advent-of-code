@@ -14,19 +14,27 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-We can use `Stream.transform/2` here to transform our list of directions into a stream that contains the coordinates of Santa after following each direction.
-Once we have this stream we just need to add the initial position of `{0, 0}` and then count the unique entries to derive our answer.
+My idea is to process each direction whilst emitting the resulting coordinates of Santa. That way we can count the unique coordinates, which answers our problem. 
+It appears that `Stream.scan/3` has this exact functionality, it allows us to carry forward and emit an accumulator (the current position of Santa) whilst processing a stream (our list of directions). We just need to ensure we add in our starting coordinates of `{0, 0}` before counting the unique entries.
+
+```elixir
+defmodule Part1 do
+  def move(direction, pos) do
+    case {direction, pos} do
+      {">", {x, y}} -> {x + 1, y}
+      {"v", {x, y}} -> {x, y - 1}
+      {"<", {x, y}} -> {x - 1, y}
+      {"^", {x, y}} -> {x, y + 1}
+    end
+  end
+end
+```
 
 ```elixir
 input
 |> Kino.Input.read()
 |> String.graphemes()
-|> Stream.transform({0, 0}, fn
-  ">", {x, y} -> {[{x + 1, y}], {x + 1, y}}
-  "v", {x, y} -> {[{x, y - 1}], {x, y - 1}}
-  "<", {x, y} -> {[{x - 1, y}], {x - 1, y}}
-  "^", {x, y} -> {[{x, y + 1}], {x, y + 1}}
-end)
+|> Stream.scan({0, 0}, &Part1.move/2)
 |> Stream.concat([{0, 0}])
 |> Stream.uniq()
 |> Enum.count()
@@ -34,19 +42,31 @@ end)
 
 ## Part 2
 
-Adding Robo-Santa doesn't change our code too much. In our transform we now track two sets of coordinates as the accumulator, and in each successive call we rotate the two sets of coordinates, so that our transform only affects one Santa at a time.
+Now we have added Robo-Santa we need to rethink our `Part1.move/2` function that handled processing the directions in the previous part. The stream of directions now naturally group into pairs, since one will be used to move Santa and the next to move Robo-Santa, so to model this we use `Stream.chunk_every/2`, to process two directions at a time. We also need to manage the positions of two entities, so our accumulator takes the shape `[{x0, y0}, {x1, y1}]`. This means that `Stream.scan/3` will now pass two lists to its inner function, for example `[">", "v"], [{1, 0}, {3, 3}]` and we would like to return `[{2, 0}, {3, 2}]` as our result. This behaviour is realised with `Enum.zip_with/3` and our existing `Part1.move/2` functions, which we combine as `Part2.move/2`.
+
+After following the above, we have a stream of pairs of positions, something like `[[{0, 1}, {2, 5}], [{3, 4}, {1, 2}], ...]` which we need to flatten, since we are asked to determine the unique locations shared across Santa's and Robo-Santa's travels.
+
+Once flattened we can count the unique entries, like before, to conclude with our answer.
 
 ```elixir
+defmodule Part2 do
+  def move(directions, positions) do
+    Enum.zip_with(directions, positions, &Part1.move/2)
+  end
+end
+```
+
+```elixir
+import Part2
+
 input
 |> Kino.Input.read()
 |> String.graphemes()
-|> Stream.transform({{0, 0}, {0, 0}}, fn
-  ">", {{x, y}, next} -> {[{x + 1, y}], {next, {x + 1, y}}}
-  "v", {{x, y}, next} -> {[{x, y - 1}], {next, {x, y - 1}}}
-  "<", {{x, y}, next} -> {[{x - 1, y}], {next, {x - 1, y}}}
-  "^", {{x, y}, next} -> {[{x, y + 1}], {next, {x, y + 1}}}
-end)
+|> Stream.chunk_every(2)
+|> Stream.scan([{0, 0}, {0, 0}], &Part2.move/2)
 |> Stream.concat([{0, 0}])
+|> Enum.to_list()
+|> List.flatten()
 |> Stream.uniq()
 |> Enum.count()
 ```
