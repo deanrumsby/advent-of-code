@@ -12,61 +12,72 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Part 1
+## Shared Modules
 
-My idea is to process each direction whilst emitting the resulting coordinates of Santa. That way we can count the unique coordinates, which answers our problem. 
-It appears that `Stream.scan/3` has this exact functionality, it allows us to carry forward and emit an accumulator (the current position of Santa) whilst processing a stream (our list of directions). We just need to ensure we add in our starting coordinates of `{0, 0}` before counting the unique entries.
+````elixir
+defmodule Santa do
+  defstruct x: 0, y: 0
 
-```elixir
-defmodule Part1 do
-  def move(direction, pos) do
-    case {direction, pos} do
-      {">", {x, y}} -> {x + 1, y}
-      {"v", {x, y}} -> {x, y - 1}
-      {"<", {x, y}} -> {x - 1, y}
-      {"^", {x, y}} -> {x, y + 1}
+  @doc """
+  Updates a Santa's position given a direction
+
+  ## Example
+  ```elixir
+  iex> Santa.move(%Santa{x: 1, y: 6}, "^")
+  %Santa{x: 1, y: 7}
+  """
+  def move(santa, direction) do
+    case direction do
+      ">" -> %{santa | x: santa.x + 1}
+      "v" -> %{santa | y: santa.y - 1}
+      "<" -> %{santa | x: santa.x - 1}
+      "^" -> %{santa | y: santa.y + 1}
     end
   end
+
+  @doc """
+  Takes a list of Santas and a list of directions (of the same size) and returns 
+  a list of updated Santas. Each Santa is updated by the direction with the same index. 
+
+  ## Example
+  ```elixir
+  iex> Santa.coordinate([%Santa{x: 3, y: 2}, %Santa{x: 1, y: 1}], ["<", "v"])
+  [%Santa{x: 2, y: 2}, %Santa{x: 1, y: 0}]
+  ```
+  """
+  def coordinate(santas, directions) do
+    Enum.zip_with(santas, directions, &move/2)
+  end
 end
-```
+````
+
+## Part 1
+
+We use `Enum.map_reduce/3` in combination with `Santa.move/2` to create an enumeration of all the positions Santa visits. We then count all the unique entries to produce our answer.
 
 ```elixir
-input
-|> Kino.Input.read()
-|> String.graphemes()
-|> Stream.scan({0, 0}, &Part1.move/2)
-|> Stream.concat([{0, 0}])
+{positions, final_position} =
+  Kino.Input.read(input)
+  |> String.graphemes()
+  |> Enum.map_reduce(%Santa{}, &{&2, Santa.move(&2, &1)})
+
+Stream.concat(positions, [final_position])
 |> Stream.uniq()
 |> Enum.count()
 ```
 
 ## Part 2
 
-Now we have added Robo-Santa we need to rethink our `Part1.move/2` function that handled processing the directions in the previous part. The stream of directions now naturally group into pairs, since one will be used to move Santa and the next to move Robo-Santa, so to model this we use `Stream.chunk_every/2`, to process two directions at a time. We also need to manage the positions of two entities, so our accumulator takes the shape `[{x0, y0}, {x1, y1}]`. This means that `Stream.scan/3` will now pass two lists to its inner function, for example `[">", "v"], [{1, 0}, {3, 3}]` and we would like to return `[{2, 0}, {3, 2}]` as our result. This behaviour is realised with `Enum.zip_with/3` and our existing `Part1.move/2` functions, which we combine as `Part2.move/2`.
-
-After following the above, we have a stream of pairs of positions, something like `[[{0, 1}, {2, 5}], [{3, 4}, {1, 2}], ...]` which we need to flatten, since we are asked to determine the unique locations shared across Santa's and Robo-Santa's travels.
-
-Once flattened we can count the unique entries, like before, to conclude with our answer.
+Now there are two Santas, our directions naturally partition into groups of two, which we can model using `Stream.chunk_every/2`. We make use of `Santa.coordinate/2` to delegate the movement of both Santas with respect to this new data shape. Since `Santa.coordinate/2` returns a list, we use `Enum.flat_map_reduce/3` to simultaneously flatten our results ready for counting.
 
 ```elixir
-defmodule Part2 do
-  def move(directions, positions) do
-    Enum.zip_with(directions, positions, &Part1.move/2)
-  end
-end
-```
+{positions, final_positions} =
+  Kino.Input.read(input)
+  |> String.graphemes()
+  |> Stream.chunk_every(2)
+  |> Enum.flat_map_reduce([%Santa{}, %Santa{}], &{&2, Santa.coordinate(&2, &1)})
 
-```elixir
-import Part2
-
-input
-|> Kino.Input.read()
-|> String.graphemes()
-|> Stream.chunk_every(2)
-|> Stream.scan([{0, 0}, {0, 0}], &Part2.move/2)
-|> Stream.concat([{0, 0}])
-|> Enum.to_list()
-|> List.flatten()
+Stream.concat(positions, final_positions)
 |> Stream.uniq()
 |> Enum.count()
 ```

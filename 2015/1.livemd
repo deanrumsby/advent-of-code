@@ -12,12 +12,18 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Part 1
+## Shared Modules
 
-To determine the floor Santa arrives at, we just need to iterate/ process each of the instructions whilst tracking the current floor number. This is the perfect job for a reducer, which we can extract as the following `Part1.next_floor/2` function.
+````elixir
+defmodule Santa do
+  @doc """
+  Returns the next floor number, given an instruction and current floor number
 
-```elixir
-defmodule Part1 do
+  ## Example
+  ```elixir
+  iex> Santa.next_floor(")", 34)
+  33
+  """
   def next_floor(instruction, current_floor) do
     case instruction do
       "(" -> current_floor + 1
@@ -25,24 +31,23 @@ defmodule Part1 do
     end
   end
 end
-```
+````
+
+## Part 1
+
+We use `Enum.reduce/3` and `Santa.next_floor/2` to track the floor number Santa arrives at after each instruction. 
+The final result is our answer.
 
 ```elixir
 input
 |> Kino.Input.read()
 |> String.graphemes()
-|> Enum.reduce(0, &Part1.next_floor/2)
+|> Enum.reduce(0, &Santa.next_floor/2)
 ```
 
 ## Part 2
 
-To find the position at which Santa enters the basement, we can follow the same procedure as before, but by using `Stream.with_index/1` and `Enum.reduce_while/3` we can halt the procedure and return the position/index once we reach the basement. Since the rules for changing floor are the same as in Part 1, we will continue to use `Part1.next_floor/2` in Part 2.
-
-```elixir
-defmodule Part2 do
-  defdelegate next_floor(instruction, current_floor), to: Part1
-end
-```
+The same process as in part 1, except now we use `Enum.reduce_while/3` and `Stream.with_index/1` to halt the process once we reach the basement level and return the position.
 
 ```elixir
 input
@@ -51,6 +56,6 @@ input
 |> Stream.with_index()
 |> Enum.reduce_while(0, fn
   {_, position}, -1 -> {:halt, position}
-  {instruction, _}, floor -> {:cont, Part2.next_floor(instruction, floor)}
+  {instruction, _}, floor -> {:cont, Santa.next_floor(instruction, floor)}
 end)
 ```
