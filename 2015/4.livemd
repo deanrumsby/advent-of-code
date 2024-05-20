@@ -12,56 +12,60 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Part 1
+## Shared Modules
 
-We need to keep generating hashes until we compute one that satisfies the given condition (it must start with five zeroes). We can use `Stream.unfold/2` to create an infinite stream of hashes, and then follow that with `Enum.find/2` to retrieve the first successful hash.
+`AdventCoinMiner` takes a secret and allows us to mine for successful hashes. It does so by creating an infinite stream of `{index, hash}` tuples, which is then enumerated to find the first hash that satisfies the given difficulty condition.
 
-Whilst generating hashes with `Part1.hash/2` we return a tuple with the shape `{index, hash}` instead of returning just the hash value. I chose to do this as the index is needed as our answer, so we would like to keep hold of it throughout the calculations. Thus a hash in our context has this shape, and such when we check with `Part1.successful_hash/1`, or wish to return our index answer, we use `Kernel.elem/2` to use the correct values.
+````elixir
+defmodule AdventCoinMiner do
+  @doc """
+  Finds the first successful index for mining, given the secret and difficulty. 
 
-```elixir
-defmodule Part1 do
-  def successful_hash?(hash) do
-    String.starts_with?(elem(hash, 1), "00000")
+  ## Example 
+  ```elixir
+  iex> AdventCoinMiner.mine("hello", 2)
+  33
+  ```
+  """
+  def mine(secret, difficulty) do
+    Stream.unfold(1, &{hash(secret, &1), &1 + 1})
+    |> Enum.find(&success?(&1, difficulty))
+    |> elem(0)
   end
 
-  def hash(secret, index) do
+  # returns a tuple {index, hash} using the md5 hashing algorithm
+  defp hash(secret, index) do
     create_nonce(secret, index)
     |> then(fn nonce -> Base.encode16(:crypto.hash(:md5, nonce)) end)
     |> then(&{index, &1})
   end
 
+  # checks the first n (difficulty) characters of the hash for zeroes
+  defp success?(hash, difficulty) do
+    String.starts_with?(elem(hash, 1), String.duplicate("0", difficulty))
+  end
+
+  # concatenates the secret and current index
   defp create_nonce(secret, index), do: secret <> Integer.to_string(index)
 end
-```
+````
+
+## Part 1
+
+We use `AdventCoinMiner.mine/2` with the secret and set difficulty to find the required index.
 
 ```elixir
-secret = Kino.Input.read(input)
-
-Stream.unfold(1, fn i -> {Part1.hash(secret, i), i + 1} end)
-|> Enum.find(fn hash -> Part1.successful_hash?(hash) end)
-|> elem(0)
+input
+|> Kino.Input.read()
+|> AdventCoinMiner.mine(5)
 ```
 
 ## Part 2
 
-For part 2 we can use the exact same strategy, we just have to update our check function into `Part2.successful_hash?/1` to use six zeroes.
-
-On my machine the enumeration required to return the answer took a handful of seconds.
+Exactly the same process as part 1, using a higher difficulty condition.
 
 ```elixir
-defmodule Part2 do
-  def successful_hash?(hash) do
-    String.starts_with?(elem(hash, 1), "000000")
-  end
-
-  defdelegate hash(secret, index), to: Part1
-end
-```
-
-```elixir
-secret = Kino.Input.read(input)
-
-Stream.unfold(1, fn i -> {Part2.hash(secret, i), i + 1} end)
-|> Enum.find(fn hash -> Part2.successful_hash?(hash) end)
-|> elem(0)
+input
+|> Kino.Input.read()
+|> AdventCoinMiner.mine(6)
 ```

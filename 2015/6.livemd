@@ -12,56 +12,131 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Part 1
+## Shared Modules
 
 ```elixir
 defmodule LightGrid do
-  def new(start_value, updater) do
-    Map.new(for i <- 0..999, j <- 0..999, do: {{i, j}, start_value})
-    |> Map.put(:updater, updater)
+  @doc """
+  Creates a nested Map structure to model the light grid. This is significantly
+  more performant than using a single Map.
+  The map has shape: 
+  %{
+    {0, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}}, 
+    {1, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}},
+    ...,
+    {999, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}},
+  }
+  """
+  def new() do
+    Map.new(for x <- 0..999, do: {x, Map.new(for y <- 0..999, do: {y, 0})})
   end
 
+  @doc """
+  Processes an instruction for the light grid.
+  """
   def instruct(grid, instruction) do
-    {type, start, finish} = instruction
+    {updater, start, finish} = instruction
+    {{x0, y0}, {x1, y1}} = {start, finish}
 
-    subgrid(start, finish)
-    |> Enum.reduce(grid, &Map.update!(&2, &1, &2.updater.(type)))
+    y0..y1
+    |> Enum.reduce(grid, fn
+      y, acc -> update_row(acc, y, x0, x1, updater)
+    end)
   end
 
-  defp subgrid(start, finish) do
-    {{x0, y0}, {x1, y1}} = {start, finish}
-    for i <- x0..x1, j <- y0..y1, do: {i, j}
+  @doc """
+  Counts the number of lights that are on.
+  """
+  def lit_count(grid) do
+    grid
+    |> lit()
+    |> Enum.count()
+  end
+
+  @doc """
+  Returns the total brightness of all the lights
+  """
+  def total_brightness(grid) do
+    grid
+    |> lit()
+    |> Enum.reduce(0, fn {_col, val}, acc -> acc + val end)
+  end
+
+  # returns a list of all the lit lights
+  defp lit(grid) do
+    grid
+    |> Map.values()
+    |> Enum.flat_map(fn row -> filter_lit(row) end)
+  end
+
+  # updates the map at grid[row]
+  defp update_row(grid_map, y, x0, x1, updater) do
+    Map.update!(grid_map, y, fn row -> update_row_columns(row, x0, x1, updater) end)
+  end
+
+  # updates the neccessary column values of the row
+  defp update_row_columns(y, x0, x1, updater) do
+    x0..x1
+    |> Enum.reduce(y, fn x, col -> Map.update!(col, x, updater) end)
+  end
+
+  # returns a list of the lit lights in the row
+  defp filter_lit(row) do
+    Map.filter(row, fn {_col, val} -> val > 0 end)
   end
 end
 ```
 
 ```elixir
-defmodule InstParser do
-  def parse(str) do
+defmodule InstructionParser do
+  @doc """
+  Parses a string into an instruction with respect to rules provided. 
+  Rules is a function that has the form
+  (:toggle | :turn_on | :turn_off) -> (state -> new_state)
+  """
+  def parse(str, rules) do
     pattern = ~r/(turn on|turn off|toggle) (\d+,\d+) through (\d+,\d+)/
     [inst_type, start, finish] = Regex.run(pattern, str, capture: :all_but_first)
-    {String.to_atom(inst_type), parse_tuple(start), parse_tuple(finish)}
+
+    {
+      rules.(parse_type(inst_type)),
+      parse_tuple(start),
+      parse_tuple(finish)
+    }
   end
 
+  # parse a string eg. "20,550" into a tuple {20, 550}
   defp parse_tuple(str) do
     String.split(str, ",")
     |> Enum.map(&String.to_integer/1)
     |> List.to_tuple()
   end
+
+  # parse a type eg. "turn on" into an atom :turn_on
+  defp parse_type(str) do
+    case str do
+      "turn on" -> :turn_on
+      "turn off" -> :turn_off
+      "toggle" -> :toggle
+    end
+  end
 end
 ```
+
+## Part 1
 
 ```elixir
 defmodule Part1 do
-  def updater(inst_type) do
+  @doc """
+  Rules for the instruction types.
+  """
+  def rules(inst_type) do
     case inst_type do
-      :"turn on" -> fn _ -> true end
-      :"turn off" -> fn _ -> false end
-      :toggle -> fn state -> !state end
+      :turn_on -> fn _val -> 1 end
+      :turn_off -> fn _val -> 0 end
+      :toggle -> fn val -> if(val == 0, do: 1, else: 0) end
     end
   end
-
-  def light_on?(light), do: light == true
 end
 ```
 
@@ -69,20 +144,23 @@ end
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Stream.map(&InstParser.parse/1)
-|> Enum.reduce(LightGrid.new(false, &Part1.updater/1), &LightGrid.instruct(&2, &1))
-|> Map.delete(:updater)
-|> Map.values()
-|> Enum.count(&Part1.light_on?/1)
+|> Stream.map(fn str -> InstructionParser.parse(str, &Part1.rules/1) end)
+|> Enum.reduce(LightGrid.new(), &LightGrid.instruct(&2, &1))
+|> LightGrid.lit_count()
 ```
+
+## Part 2
 
 ```elixir
 defmodule Part2 do
-  def updater(inst_type) do
+  @doc """
+  Rules for the instruction types.
+  """
+  def rules(inst_type) do
     case inst_type do
-      :"turn on" -> fn state -> state + 1 end
-      :"turn off" -> fn state -> if(state > 0, do: state - 1, else: 0) end
-      :toggle -> fn state -> state + 2 end
+      :turn_on -> fn val -> val + 1 end
+      :turn_off -> fn val -> if(val > 0, do: val - 1, else: 0) end
+      :toggle -> fn val -> val + 2 end
     end
   end
 end
@@ -92,9 +170,7 @@ end
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Stream.map(&InstParser.parse/1)
-|> Enum.reduce(LightGrid.new(0, &Part2.updater/1), &LightGrid.instruct(&2, &1))
-|> Map.delete(:updater)
-|> Map.values()
-|> Enum.sum()
+|> Stream.map(fn str -> InstructionParser.parse(str, &Part2.rules/1) end)
+|> Enum.reduce(LightGrid.new(), &LightGrid.instruct(&2, &1))
+|> LightGrid.total_brightness()
 ```
