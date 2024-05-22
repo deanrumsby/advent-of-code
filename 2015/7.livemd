@@ -1,0 +1,165 @@
+# Day 7: Some Assembly Required
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Shared Modules
+
+````elixir
+defmodule Parser do
+  @doc """
+  Parses a string into a list of instruction tuples
+  of form {destination, operation, sources}
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("li AND hk -> hl\\ntu OR su -> pk")
+  [{:hl, :AND, [:li, :hk]}, {:pk, :OR, [:tu, :su]}]
+  ```
+  """
+  def parse(str) do
+    str
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  # parses single line into instruction form
+  defp parse_line(str) do
+    [expr | [dest]] = String.split(str, " -> ")
+    op_matches = Regex.run(~r/AND|OR|LSHIFT|RSHIFT|NOT/, expr)
+    operand_matches = Regex.scan(~r/\d+|[a-z]+/, expr)
+    {parse_dest(dest), parse_op(op_matches), parse_operands(operand_matches)}
+  end
+
+  # creates atom of destination identifier
+  defp parse_dest(dest) do
+    String.to_atom(dest)
+  end
+
+  # creates atom of operation string
+  defp parse_op(op_matches) do
+    op_matches
+    |> case do
+      nil -> :EQUAL
+      [op] -> String.to_atom(op)
+    end
+  end
+
+  # ensures we have a flat list of integers or identifiers as operands
+  defp parse_operands(operand_matches) do
+    operand_matches
+    |> List.flatten()
+    |> Enum.map(&parse_operand/1)
+  end
+
+  # parses single operand
+  defp parse_operand(operand) do
+    Integer.parse(operand)
+    |> case do
+      :error -> String.to_atom(operand)
+      {integer, _} -> integer
+    end
+  end
+end
+````
+
+```elixir
+defmodule Circuit do
+  @u16_size 65536
+
+  @doc """
+  Creates a new Circuit datastructure
+  """
+  def new() do
+    Map.new()
+  end
+
+  @doc """
+  Attaches an identifier and its instruction to the circuit
+  A key value pair will have shape: %{cd: {:rv, :NOT, [:xt]}}
+  """
+  def add_connection(circuit, instruction) do
+    Map.put(circuit, elem(instruction, 0), instruction)
+  end
+
+  @doc """
+  Evaluates the signal for a specific wire identifier
+  """
+  def get_signal(circuit, identifier) do
+    resolve_wire(circuit, circuit[identifier])
+    |> elem(0)
+  end
+
+  @doc """
+  Overrides a signal for a specific wire identifier and returns the Circuit.
+  """
+  def put_signal(circuit, identifier, value) do
+    Map.put(circuit, identifier, {identifier, :EQUAL, [value]})
+  end
+
+  # recursively evaluates the wires, using a cache to store previously 
+  # evaluated answers for fast lookup.
+  # works by mapping over the sources and resolving them, whilst passing along the cache.
+  # once the arguments have been resolved, then applies the instruction operation
+  # to the list of arguments before returning the result and cache.
+  # all results are modulo 2^16 to ensure 16 bit width.
+  defp resolve_wire(circuit, instruction, cache \\ Map.new()) do
+    {dest, op, sources} = instruction
+
+    {args, next_cache} =
+      Enum.map_reduce(sources, cache, fn
+        value, c when is_integer(value) -> {value, c}
+        id, c -> if c[id], do: {c[id], c}, else: resolve_wire(circuit, circuit[id], c)
+      end)
+
+    result = apply(gate(op), args) |> Integer.mod(@u16_size)
+    {result, Map.put(next_cache, dest, result)}
+  end
+
+  # defines the functions used to evaluate each operation type
+  defp gate(op) do
+    case op do
+      :EQUAL -> fn a -> a end
+      :AND -> fn a, b -> Bitwise.band(a, b) end
+      :OR -> fn a, b -> Bitwise.bor(a, b) end
+      :LSHIFT -> fn a, b -> Bitwise.bsl(a, b) end
+      :RSHIFT -> fn a, b -> Bitwise.bsr(a, b) end
+      :NOT -> fn a -> Bitwise.bnot(a) end
+    end
+  end
+end
+```
+
+## Part 1
+
+For part 1 we must first parse the instructions and create our Circuit structure. We do this with `Circuit.add_connections/2`. Once we have built the circuit we call `Circuit.get_signal/1` to evaluate the signal on wire `:a`.
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Enum.reduce(Circuit.new(), &Circuit.add_connection(&2, &1))
+|> Circuit.get_signal(:a)
+```
+
+## Part 2
+
+In part 2 we use `Circuit.put_signal/3` to override the signal of `:b`. Once that is done we can call `Circuit.get_signal/1` to once again evaluate wire `:a`.
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Enum.reduce(Circuit.new(), &Circuit.add_connection(&2, &1))
+|> then(&Circuit.put_signal(&1, :b, Circuit.get_signal(&1, :a)))
+|> Circuit.get_signal(:a)
+```
