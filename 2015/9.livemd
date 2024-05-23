@@ -1,0 +1,141 @@
+# Day 9: All in a Single Night
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+````elixir
+defmodule CityGraph do
+  @doc """
+  Creates a new CityGraph data structure.
+  """
+  def new() do
+    Map.new()
+  end
+
+  @doc """
+  Adds a new connection to the graph. Uses nested maps to store 
+  connection distances.
+
+  ## Example
+  ```elixir
+  iex> CityGraph.new()
+  iex> |> CityGraph.add_connection({:london, :dublin, 464})
+  %{london: %{dublin: 464}, dublin: %{london: 464}}
+  """
+  def add_connection(graph, {from, to, dist}) do
+    graph
+    |> Map.update(from, Map.new([{to, dist}]), &Map.put(&1, to, dist))
+    |> Map.update(to, Map.new([{from, dist}]), &Map.put(&1, from, dist))
+  end
+
+  @doc """
+  Finds the shortest Hamiltonian path amongst all provided cities
+  """
+  def shortest_path(graph) do
+    graph
+    |> path_distances()
+    |> Enum.min()
+  end
+
+  @doc """
+  Finds the longest Hamiltonian path amongst all provided cities.
+  """
+  def longest_path(graph) do
+    graph
+    |> path_distances()
+    |> Enum.max()
+  end
+
+  # returns a list of all the path distances
+  defp path_distances(graph) do
+    graph
+    |> Map.keys()
+    |> permutations()
+    |> Enum.map(&path_distance(graph, &1))
+  end
+
+  # calculates a single path's length/distance
+  defp path_distance(graph, path) do
+    path
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [from | [to]] -> graph[from][to] end)
+    |> Enum.sum()
+  end
+
+  # base case for permutations
+  defp permutations([]), do: [[]]
+
+  # returns a list of all the permutations of elements within 
+  # the provided list
+  defp permutations(list) do
+    for elem <- list, rest <- permutations(list -- [elem]), do: [elem | rest]
+  end
+end
+````
+
+```elixir
+defmodule Parser do
+  @doc ~S"""
+  Parses a string into a list of city connections
+
+  ## Example
+  iex> Parser.parse("London to Dublin = 464\nLondon to Belfast = 518")
+  [{:london, :dublin, 464}, {:london, :belfast, 518}]
+  """
+  def parse(str) do
+    str
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  # parses a single line into a city connection
+  defp parse_line(str) do
+    [from | [to | [dist]]] = String.split(str, [" to ", " = "])
+    {parse_city(from), parse_city(to), parse_distance(dist)}
+  end
+
+  # atomises the city name
+  defp parse_city(str) do
+    str
+    |> String.downcase()
+    |> String.to_atom()
+  end
+
+  # parses the distance as an integer
+  defp parse_distance(str) do
+    str
+    |> String.to_integer()
+  end
+end
+```
+
+In part 1, we create the `Map` used as a `CityGraph` by first parsing the input and then applying `Enum.reduce/3` to add all of the connections. The `CityGraph` data structure then calculates every path that can connects all of the cities as described in the puzzle (we are bruteforcing a solution as this is the only reasonable method). Once this has been done we can calculate the distances and report the minimum with `CityGraph.shortest_path/1`.
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Enum.reduce(CityGraph.new(), &CityGraph.add_connection(&2, &1))
+|> CityGraph.shortest_path()
+```
+
+## Part 2
+
+This follows the exact same procedure and caluclations, however we now take the maximum of all possible paths.
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Enum.reduce(CityGraph.new(), &CityGraph.add_connection(&2, &1))
+|> CityGraph.longest_path()
+```

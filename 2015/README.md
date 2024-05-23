@@ -10,3 +10,4 @@
 - [Day 6: Probably a Fire Hazard](6.livemd)
 - [Day 7: Some Assembly Required](7.livemd)
 - [Day 8: Matchsticks](8.livemd)
+- [Day 9: All in a Single Night](9.livemd)
