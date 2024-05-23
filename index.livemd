@@ -1,5 +1,0 @@
-# Advent of Code
-
-## Solutions
-
-* [2015](2015/index.livemd)
