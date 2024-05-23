@@ -1,0 +1,78 @@
+# Day 8: Matchsticks
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+````elixir
+defmodule Part1 do
+  @doc ~S"""
+  Decodes string by interpreting all escape sequences
+  of the inner string.
+
+  ## Example
+  ```elixir
+  iex> Part1.decode(~S("\x27"))
+  "'"
+  ```
+  """
+  def decode(str) do
+    str
+    |> String.slice(1..-2)
+    |> Macro.unescape_string()
+  end
+end
+````
+
+We split on newlines to gather all of the individual strings. When processing with `Part1.decode/1` we use the built in `Macro.unescape_string/1` to perform the neccessary string interpolation. We take the difference of each string and then sum the results to derive our answer.
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&(String.length(&1) - String.length(Part1.decode(&1))))
+|> Enum.sum()
+```
+
+## Part 2
+
+````elixir
+defmodule Part2 do
+  @doc ~S"""
+  Encodes a string into a textual representation where all 
+  escape sequences and surrounding quotes are printed literally
+
+  ## Example
+  ```elixir
+  iex> Part2.encode(~S("\x27"))
+  ~S("\"\\x27\"")
+  ```
+  """
+  def encode(str) do
+    str
+    |> String.replace("\\", "\\\\")
+    |> String.replace("\"", "\\\"")
+    |> then(&("\"" <> &1 <> "\""))
+  end
+end
+````
+
+For part 2 we need to convert the string the other way. We would like to print each backslash character, so any escape character with a backslash needs to be replaced to accommodate this and the new quotes attached. Once this is done it is the same process as part 1.
+
+```elixir
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Enum.map(&(String.length(Part2.encode(&1)) - String.length(&1)))
+|> Enum.sum()
+```
