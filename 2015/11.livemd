@@ -1,0 +1,107 @@
+# Day 11: Corporate Policy
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Shared Modules
+
+````elixir
+defmodule PasswordGenerator do
+  @doc """
+  Finds the next valid password, given a string.
+
+  ## Example
+  ```elixir
+  iex> PasswordGenerator.next_password("abcdefgh")
+  "abcdffaa"
+  ```
+  """
+  def next_password(str) do
+    new = next(str)
+    if valid?(new), do: new, else: next_password(new)
+  end
+
+  # checks if a password is valid
+  defp valid?(str) do
+    not has_illegal_letter?(str) &&
+      has_two_pairs?(str) &&
+      has_straight?(str)
+  end
+
+  # increments the string
+  # ie. "avezxzz" maps to "avezyaa"
+  defp next(str) do
+    str
+    |> String.to_charlist()
+    |> Enum.reverse()
+    |> Enum.map_reduce(:inc, fn
+      char, :halt -> {char, :halt}
+      ?z, :inc -> {?a, :inc}
+      char, :inc -> {char + 1, :halt}
+    end)
+    |> elem(0)
+    |> Enum.reverse()
+    |> List.to_string()
+  end
+
+  # does string have a straight of three ie. "abc" 
+  defp has_straight?(str) do
+    str
+    |> String.to_charlist()
+    |> Enum.chunk_every(3, 1, :discard)
+    |> Enum.any?(fn [a, b, c] -> c == b + 1 && b == a + 1 end)
+  end
+
+  # does string have any illegal letters "i", "o" or "l"
+  defp has_illegal_letter?(str) do
+    str
+    |> String.contains?(["i", "o", "l"])
+  end
+
+  # does string contain two non-overlapping pairs of letters
+  defp has_two_pairs?(str) do
+    str
+    |> count_pairs()
+    |> then(&(&1 >= 2))
+  end
+
+  # counts all non-overlapping pairs of letters
+  defp count_pairs(str) do
+    str
+    |> String.to_charlist()
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.reduce({:cont, 0}, fn
+      _elts, {:skip, count} -> {:cont, count}
+      [a, b], {:cont, count} when a == b -> {:skip, count + 1}
+      _elts, {:cont, count} -> {:cont, count}
+    end)
+    |> elem(1)
+  end
+end
+````
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> PasswordGenerator.next_password()
+```
+
+## Part 2
+
+```elixir
+input
+|> Kino.Input.read()
+|> PasswordGenerator.next_password()
+|> PasswordGenerator.next_password()
+```
