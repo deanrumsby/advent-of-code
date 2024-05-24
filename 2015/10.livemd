@@ -1,0 +1,94 @@
+# Day 10: Elves Look, Elves Say
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Shared Modules
+
+```elixir
+defmodule LookAndSay do
+  @doc """
+  Given a string, returns the next string in the look and say sequence.
+
+  The accumulator has shape {res, {count, ch}} to keep track of repeated 
+  occurrences of a character, where res is the resulting string. 
+
+  ## Example
+  iex> LookAndSay.next("3224")
+  "132214"
+  """
+  def next(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce({"", {0, ""}}, &process_char/2)
+    |> finalise()
+  end
+
+  @doc """
+  Base case for LookAndSay.next/2 when count is zero.
+  """
+  def next(str, 0) do
+    str
+  end
+
+  @doc """
+  Iterates on LookAndSay.next/1 for a given positive integer
+  """
+  def next(str, count) do
+    next(str)
+    |> next(count - 1)
+  end
+
+  # base case for first call to reducer
+  defp process_char(char, {"", {0, ""}}) do
+    {"", {1, char}}
+  end
+
+  # when current char being processed is the same as previous
+  defp process_char(char, {res, {count, l}}) when char == l do
+    {res, {count + 1, l}}
+  end
+
+  # when current char being processed is different to previous
+  defp process_char(char, {res, {count, l}}) do
+    {res <> Integer.to_string(count) <> l, {1, char}}
+  end
+
+  # takes final accumulator from LookAndSay.next/2 and 
+  # concatenates needed characters
+  defp finalise({res, {count, l}}) do
+    res <> Integer.to_string(count) <> l
+  end
+end
+```
+
+## Part 1
+
+We use `LookAndSay.next/2` to iterate our input 40 times. Once we have the string we can count the characters using `String.length/1`.
+
+```elixir
+input
+|> Kino.Input.read()
+|> LookAndSay.next(40)
+|> String.length()
+```
+
+## Part 2
+
+The same as part 1 but with 50 iterations.
+
+```elixir
+input
+|> Kino.Input.read()
+|> LookAndSay.next(50)
+|> String.length()
+```
