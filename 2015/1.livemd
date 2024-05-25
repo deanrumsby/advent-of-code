@@ -6,56 +6,117 @@ Mix.install([
 ])
 ```
 
+## Modules
+
+````elixir
+defmodule Santa do
+  @moduledoc """
+  Functions for navigating Santa up and down a large apartment
+  building. 
+  """
+
+  @typedoc "The direction of travel"
+  @type direction() :: :up | :down
+
+  @doc """
+  Provides Santa with directions to follow. Returns the floor number reached.
+
+  ## Example
+  ```elixir
+  iex> [:up, :up, :up, :down, :up, :down]
+  iex> |> Santa.follow()
+  2
+  ```
+  """
+  @spec follow(Enumerable.t(direction())) :: integer()
+  def follow(directions) do
+    directions
+    |> Enum.reduce(0, &next_floor/2)
+  end
+
+  @doc """
+  Finds the position such that Santa first enters a specified floor, given
+  a sequence of directions.
+
+  ## Example
+  ```elixir
+  iex> [:up, :down, :up, :up, :down, :down]
+  iex> |> Santa.find_floor(2)
+  4
+  ```
+  """
+  @spec find_floor(Enumerable.t(direction()), integer()) :: pos_integer()
+  def find_floor(directions, desired_floor) do
+    directions
+    |> Stream.with_index()
+    |> Enum.reduce_while(0, fn
+      {_, position}, ^desired_floor -> {:halt, position}
+      {direction, _}, floor -> {:cont, next_floor(direction, floor)}
+    end)
+  end
+
+  defp next_floor(direction, current_floor)
+  defp next_floor(:up, current_floor), do: current_floor + 1
+  defp next_floor(:down, current_floor), do: current_floor - 1
+end
+````
+
+````elixir
+defmodule Parser do
+  @moduledoc """
+  For parsing a string into directions that Santa can follow.
+  """
+
+  @doc """
+  Parses a string of parentheses into a stream of directions.
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("))(()")
+  iex> |> Enum.to_list()
+  [:down, :down, :up, :up, :down]
+  """
+  @spec parse(String.t()) :: Enumerable.t(Santa.direction())
+  def parse(str) do
+    str
+    |> String.graphemes()
+    |> Stream.map(&direction/1)
+  end
+
+  defp direction(symbol)
+  defp direction("("), do: :up
+  defp direction(")"), do: :down
+end
+````
+
 ## Input
 
 ```elixir
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Shared Modules
-
-````elixir
-defmodule Santa do
-  @doc """
-  Returns the next floor number, given an instruction and current floor number
-
-  ## Example
-  ```elixir
-  iex> Santa.next_floor(")", 34)
-  33
-  """
-  def next_floor(instruction, current_floor) do
-    case instruction do
-      "(" -> current_floor + 1
-      ")" -> current_floor - 1
-    end
-  end
-end
-````
-
 ## Part 1
 
-We use `Enum.reduce/3` and `Santa.next_floor/2` to track the floor number Santa arrives at after each instruction. 
-The final result is our answer.
+We need a way to follow all the directions given to us by the Elves. We start by mapping our input string into a sequence of directions `:up` and `:down`, using `Parser.parse/1`. We could have used the characters `')'` and `'('` directly, however I prefer to decouple the input from the rest of the functions we create.
+
+To follow the directions, I create a function `Santa.follow/1` which takes the directions and returns the floor number Santa arrives at by following them.
 
 ```elixir
 input
 |> Kino.Input.read()
-|> String.graphemes()
-|> Enum.reduce(0, &Santa.next_floor/2)
+|> Parser.parse()
+|> Santa.follow()
 ```
 
 ## Part 2
 
-The same process as in part 1, except now we use `Enum.reduce_while/3` and `Stream.with_index/1` to halt the process once we reach the basement level and return the position.
+In part 2 we still parse the directions the same as before, but now we need to create a new function to help us find the basement.
+
+The function `Sata.find_floor/1` takes in the stream of directions and returns the position of the first direction that causes Santa to enter the specified floor.
 
 ```elixir
 input
 |> Kino.Input.read()
-|> String.graphemes()
-|> Stream.with_index()
-|> Enum.reduce_while(0, fn
-  {_, position}, -1 -> {:halt, position}
-  {instruction, _}, floor -> {:cont, Santa.next_floor(instruction, floor)}
-end)
+|> Parser.parse()
+|> Santa.find_floor(-1)
 ```
