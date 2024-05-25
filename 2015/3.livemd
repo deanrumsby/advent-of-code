@@ -6,78 +6,174 @@ Mix.install([
 ])
 ```
 
+## Modules
+
+````elixir
+defmodule Santa do
+  @moduledoc """
+  Functions for directing Santa and Robo-Santa within an
+  infinite 2D grid of houses
+  """
+
+  defstruct x: 0, y: 0, visited: MapSet.new([{0, 0}])
+
+  @typedoc "A Santa struct"
+  @type t :: %__MODULE__{
+          x: integer(),
+          y: integer(),
+          visited: MapSet.t({integer(), integer()})
+        }
+
+  @typedoc "The directions Santa can move in"
+  @type direction :: :east | :south | :west | :north
+
+  @doc """
+  Follow the directions provided for Santa.
+  When Santa moves, any newly visited locations are also stored.
+
+  ## Example
+  ```elixir
+  iex> Santa.follow(%Santa{}, [:east, :north, :north])
+  %Santa{x: 1, y: 2, visited: MapSet.new([{0,0}, {1, 0}, {1, 1}, {1, 2}])}
+  ```
+  """
+  @spec follow(Santa.t(), list(direction())) :: Santa.t()
+  def follow(santa, directions) do
+    directions
+    |> Enum.reduce(santa, &move(&2, &1))
+  end
+
+  @doc """
+  Follow the directions provided for Santa, shared with Robo-Santa. 
+  Each pair of directions are split between Santa and Robo-Santa. 
+  Each Santa stores it's newly visited locations on each move.
+
+  ## Example
+  ```elixir
+  iex> Santa.follow(%Santa{}, %Santa{}, [:south, :west])
+  [
+    %Santa{x: 0, y: -1, visited: MapSet.new([{0, 0}, {0, -1}])},
+    %Santa{x: -1, y: 0, visited: MapSet.new([{0, 0}, {-1, 0}])},
+  ]
+  ```
+  """
+  @spec follow(Santa.t(), Santa.t(), list(direction())) :: list(Santa.t())
+  def follow(santa, robo_santa, directions) do
+    directions
+    |> Enum.chunk_every(2)
+    |> Enum.reduce([santa, robo_santa], fn
+      directions, santas -> Enum.zip_with(santas, directions, &move/2)
+    end)
+  end
+
+  @doc """
+  The total number of unique locations visited by Santa.
+
+  ## Example
+  ```elixir
+  iex> Santa.follow(%Santa{}, [:east, :west, :east, :west])
+  iex> |> Santa.total_visited()
+  2
+  ```
+  """
+  @spec total_visited(Santa.t()) :: pos_integer()
+  def total_visited(santa) do
+    MapSet.size(santa.visited)
+  end
+
+  @doc """
+  The total number of unique locations visited by Santa and Robo-Santa
+  combined.
+
+  ## Example
+  ```elixir
+  iex> [santa, robo_santa] = Santa.follow(%Santa{}, %Santa{}, [:east, :west, :east, :west])
+  iex> Santa.total_visited(santa, robo_santa)
+  5
+  ```
+  """
+  @spec total_visited(Santa.t(), Santa.t()) :: pos_integer()
+  def total_visited(santa, robo_santa) do
+    MapSet.union(santa.visited, robo_santa.visited)
+    |> MapSet.size()
+  end
+
+  # update positon and locations of santa
+  defp move(santa, direction) do
+    {x, y} = next_location(santa, direction)
+    %{santa | x: x, y: y, visited: MapSet.put(santa.visited, {x, y})}
+  end
+
+  # determine coordinates of next location
+  defp next_location(santa, direction) do
+    %Santa{x: x, y: y} = santa
+
+    case direction do
+      :east -> {x + 1, y}
+      :south -> {x, y - 1}
+      :west -> {x - 1, y}
+      :north -> {x, y + 1}
+    end
+  end
+end
+````
+
+````elixir
+defmodule Parser do
+  @moduledoc """
+  For parsing a string into a stream of directions.
+  """
+
+  @doc """
+  Parses a string into a stream of directions.
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("><^^v")
+  iex> |> Enum.to_list()
+  [:east, :west, :north, :north, :south]
+  ```
+  """
+  @spec parse(String.t()) :: Enumerable.t(Santa.direction())
+  def parse(str) do
+    str
+    |> String.graphemes()
+    |> Stream.map(&direction/1)
+  end
+
+  # parse direction
+  defp direction(str)
+  defp direction(">"), do: :east
+  defp direction("v"), do: :south
+  defp direction("<"), do: :west
+  defp direction("^"), do: :north
+end
+````
+
 ## Input
 
 ```elixir
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Shared Modules
-
-````elixir
-defmodule Santa do
-  defstruct x: 0, y: 0
-
-  @doc """
-  Updates a Santa's position given a direction
-
-  ## Example
-  ```elixir
-  iex> Santa.move(%Santa{x: 1, y: 6}, "^")
-  %Santa{x: 1, y: 7}
-  """
-  def move(santa, direction) do
-    case direction do
-      ">" -> %{santa | x: santa.x + 1}
-      "v" -> %{santa | y: santa.y - 1}
-      "<" -> %{santa | x: santa.x - 1}
-      "^" -> %{santa | y: santa.y + 1}
-    end
-  end
-
-  @doc """
-  Takes a list of Santas and a list of directions (of the same size) and returns 
-  a list of updated Santas. Each Santa is updated by the direction with the same index. 
-
-  ## Example
-  ```elixir
-  iex> Santa.coordinate([%Santa{x: 3, y: 2}, %Santa{x: 1, y: 1}], ["<", "v"])
-  [%Santa{x: 2, y: 2}, %Santa{x: 1, y: 0}]
-  ```
-  """
-  def coordinate(santas, directions) do
-    Enum.zip_with(santas, directions, &move/2)
-  end
-end
-````
-
 ## Part 1
 
-We use `Enum.map_reduce/3` in combination with `Santa.move/2` to create an enumeration of all the positions Santa visits. We then count all the unique entries to produce our answer.
-
 ```elixir
-{positions, final_position} =
-  Kino.Input.read(input)
-  |> String.graphemes()
-  |> Enum.map_reduce(%Santa{}, &{&2, Santa.move(&2, &1)})
-
-Stream.concat(positions, [final_position])
-|> Stream.uniq()
-|> Enum.count()
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> then(&Santa.follow(%Santa{}, &1))
+|> Santa.total_visited()
 ```
 
 ## Part 2
 
-Now there are two Santas, our directions naturally partition into groups of two, which we can model using `Stream.chunk_every/2`. We make use of `Santa.coordinate/2` to delegate the movement of both Santas with respect to this new data shape. Since `Santa.coordinate/2` returns a list, we use `Enum.flat_map_reduce/3` to simultaneously flatten our results ready for counting.
-
 ```elixir
-{positions, final_positions} =
-  Kino.Input.read(input)
-  |> String.graphemes()
-  |> Stream.chunk_every(2)
-  |> Enum.flat_map_reduce([%Santa{}, %Santa{}], &{&2, Santa.coordinate(&2, &1)})
+[santa, robo_santa] =
+  input
+  |> Kino.Input.read()
+  |> Parser.parse()
+  |> then(&Santa.follow(%Santa{}, %Santa{}, &1))
 
-Stream.concat(positions, final_positions)
-|> Stream.uniq()
-|> Enum.count()
+Santa.total_visited(santa, robo_santa)
 ```
