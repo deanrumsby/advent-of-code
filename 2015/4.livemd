@@ -6,18 +6,14 @@ Mix.install([
 ])
 ```
 
-## Input
-
-```elixir
-input = Kino.Input.textarea("Please paste your puzzle input:")
-```
-
-## Shared Modules
-
-`AdventCoinMiner` takes a secret and allows us to mine for successful hashes. It does so by creating an infinite stream of `{index, hash}` tuples, which is then enumerated to find the first hash that satisfies the given difficulty condition.
+## Modules
 
 ````elixir
 defmodule AdventCoinMiner do
+  @moduledoc """
+  Functions to mine Advent Coins.
+  """
+
   @doc """
   Finds the first successful index for mining, given the secret and difficulty. 
 
@@ -27,6 +23,7 @@ defmodule AdventCoinMiner do
   33
   ```
   """
+  @spec mine(String.t(), pos_integer()) :: pos_integer()
   def mine(secret, difficulty) do
     Stream.unfold(1, &{hash(secret, &1), &1 + 1})
     |> Enum.find(&success?(&1, difficulty))
@@ -42,7 +39,8 @@ defmodule AdventCoinMiner do
 
   # checks the first n (difficulty) characters of the hash for zeroes
   defp success?(hash, difficulty) do
-    String.starts_with?(elem(hash, 1), String.duplicate("0", difficulty))
+    {_, value} = hash
+    String.starts_with?(value, String.duplicate("0", difficulty))
   end
 
   # concatenates the secret and current index
@@ -50,9 +48,13 @@ defmodule AdventCoinMiner do
 end
 ````
 
-## Part 1
+## Input
 
-We use `AdventCoinMiner.mine/2` with the secret and set difficulty to find the required index.
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
 
 ```elixir
 input
@@ -61,8 +63,6 @@ input
 ```
 
 ## Part 2
-
-Exactly the same process as part 1, using a higher difficulty condition.
 
 ```elixir
 input

@@ -6,6 +6,63 @@ Mix.install([
 ])
 ```
 
+## Modules
+
+````elixir
+defmodule NiceStrings do
+  @moduledoc """
+  Functions for identifying nice strings.
+  """
+
+  @typedoc "The ruleset used to identify nice strings"
+  @type rules :: :part1 | :part2
+
+  @doc """
+  Identifies if a string is nice, given a ruleset.
+
+  ## Examples
+  ```elixir
+  iex> NiceStrings.nice_string?("ugknbfddgicrmopn", :part1)
+  true
+  iex> NiceStrings.nice_string?("jchzalrnumimnmhp", :part1)
+  false
+  iex> NiceStrings.nice_string?("qjhvhtzxzqqjkmpb", :part2)
+  true
+  iex> NiceStrings.nice_string?("uurcxstgmygtbstg", :part2)
+  false
+  ```
+  """
+  @spec nice_string?(String.t(), rules()) :: boolean()
+  def nice_string?(str, rules)
+
+  def nice_string?(str, :part1) do
+    contains_three_vowels?(str) and
+      contains_double_letter?(str) and
+      not contains_illegal_substring?(str)
+  end
+
+  def nice_string?(str, :part2) do
+    contains_pair_twice?(str) and
+      contains_repeat_with_letter_between?(str)
+  end
+
+  # does the string have three vowels? using "a", "e", "i", "o" or "u"
+  defp contains_three_vowels?(str), do: String.match?(str, ~r/(.*(a|e|i|o|u).*){3}/)
+
+  # does the string contain a repeating letter consecutively? eg. "aa" or "pp"
+  defp contains_double_letter?(str), do: String.match?(str, ~r/(\w)\1/)
+
+  # does the string contain an illegal substring? "ab", "cd", "pq" or "xy"
+  defp contains_illegal_substring?(str), do: String.match?(str, ~r/(ab|cd|pq|xy)/)
+
+  # does the string contain the same pair of letters twice? eg. "rfaaiotaa" does
+  defp contains_pair_twice?(str), do: String.match?(str, ~r/(\w\w).*(\1)/)
+
+  # does the string contain a substring like "rtr" or "zxz" or "lgl"
+  defp contains_repeat_with_letter_between?(str), do: String.match?(str, ~r/(\w)\w(\1)/)
+end
+````
+
 ## Input
 
 ```elixir
@@ -14,48 +71,18 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-We can define functions to check each of the given rules through the use `String.match?/2`. The problem then reduces to counting up the strings that pass each of the checks. Luckily for us, `Enum.count/2` allows us to filter out the successful matches by passing in a function to run on each element, providing us with the answer.
-
-```elixir
-defmodule Part1 do
-  def nice_string?(str) do
-    contains_three_vowels?(str) and
-      contains_double_letter?(str) and
-      not contains_illegal_substring?(str)
-  end
-
-  defp contains_three_vowels?(str), do: String.match?(str, ~r/(.*(a|e|i|o|u).*){3}/)
-  defp contains_double_letter?(str), do: String.match?(str, ~r/(\w)\1/)
-  defp contains_illegal_substring?(str), do: String.match?(str, ~r/(ab|cd|pq|xy)/)
-end
-```
-
 ```elixir
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Enum.count(&Part1.nice_string?(&1))
+|> Enum.count(&NiceStrings.nice_string?(&1, :part1))
 ```
 
 ## Part 2
 
-We can use the same strategy for part 2. We define the new rules and count up all the matching strings.
-
-```elixir
-defmodule Part2 do
-  def nice_string?(str) do
-    contains_pair_twice?(str) and
-      contains_repeat_with_letter_between?(str)
-  end
-
-  defp contains_pair_twice?(str), do: String.match?(str, ~r/(\w\w).*(\1)/)
-  defp contains_repeat_with_letter_between?(str), do: String.match?(str, ~r/(\w)\w(\1)/)
-end
-```
-
 ```elixir
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Enum.count(&Part2.nice_string?(&1))
+|> Enum.count(&NiceStrings.nice_string?(&1, :part2))
 ```
