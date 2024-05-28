@@ -1,0 +1,244 @@
+<!-- livebook:{"app_settings":{"access_type":"public","show_source":true,"slug":"day-12"}} -->
+
+# Day 12: JSAbacusFramework.io
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    parser = json()
+
+    parser.(input)
+    |> elem(1)
+  end
+
+  defp json() do
+    lazy(fn -> choice([string(), integer(), array(), object()]) end)
+  end
+
+  defp lazy(combinator) do
+    fn input ->
+      parser = combinator.()
+      parser.(input)
+    end
+  end
+
+  defp object() do
+    sequence([
+      char(?{),
+      optional(separated_list(key_value_pair(), char(?,))),
+      char(?})
+    ])
+    |> map(fn [_, pairs, _] ->
+      Enum.reduce(pairs, %{}, fn
+        {key, value}, acc -> Map.put(acc, key, value)
+      end)
+    end)
+  end
+
+  defp key_value_pair() do
+    sequence([
+      string(),
+      char(?:),
+      json()
+    ])
+    |> map(fn [key, _, value] -> {key, value} end)
+  end
+
+  defp array() do
+    sequence([
+      char(?[),
+      optional(separated_list(json(), char(?,))),
+      char(?])
+    ])
+    |> map(fn
+      [_, nil, _] -> []
+      [_, values, _] -> values
+    end)
+  end
+
+  defp integer() do
+    sequence([optional(char(?-)), some(digit())])
+    |> map(fn
+      [nil, digits] -> digits
+      [?-, digits] -> [?- | digits]
+    end)
+    |> map(&to_string/1)
+    |> map(&String.to_integer/1)
+  end
+
+  defp string() do
+    sequence([char(?"), many(ascii_letter()), char(?")])
+    |> map(fn [_, chars, _] -> to_string(chars) end)
+    |> map(&to_string/1)
+  end
+
+  defp map(parser, mapper) do
+    fn input ->
+      with {:ok, term, rest} <- parser.(input) do
+        {:ok, mapper.(term), rest}
+      end
+    end
+  end
+
+  defp choice(parsers) do
+    fn input ->
+      case parsers do
+        [] ->
+          {:error, "no parser succeeded"}
+
+        [first_parser | other_parsers] ->
+          with {:error, _reason} <- first_parser.(input) do
+            choice(other_parsers).(input)
+          end
+      end
+    end
+  end
+
+  defp separated_list(element_parser, separator_parser) do
+    sequence([
+      element_parser,
+      many(sequence([separator_parser, element_parser]))
+    ])
+    |> map(fn [first_element, rest] ->
+      other_elements = Enum.map(rest, fn [_, element] -> element end)
+      [first_element | other_elements]
+    end)
+  end
+
+  defp sequence(parsers) do
+    fn input ->
+      case parsers do
+        [] ->
+          {:ok, [], input}
+
+        [first_parser | other_parsers] ->
+          with {:ok, first_term, rest} <- first_parser.(input),
+               {:ok, other_terms, rest} <- sequence(other_parsers).(rest) do
+            {:ok, [first_term | other_terms], rest}
+          end
+      end
+    end
+  end
+
+  defp digit() do
+    satisfy(char(), &(&1 in ?0..?9))
+  end
+
+  defp ascii_letter() do
+    satisfy(char(), &(&1 in ?a..?z or &1 in ?A..?Z))
+  end
+
+  defp optional(parser) do
+    fn input ->
+      case parser.(input) do
+        {:error, _reason} -> {:ok, nil, input}
+        {:ok, term, rest} -> {:ok, term, rest}
+      end
+    end
+  end
+
+  defp some(parser) do
+    sequence([parser, many(parser)])
+    |> map(fn [first_term, other_terms] -> [first_term | other_terms] end)
+  end
+
+  defp many(parser) do
+    fn input ->
+      case parser.(input) do
+        {:error, _reason} ->
+          {:ok, [], input}
+
+        {:ok, first_term, rest} ->
+          {:ok, other_terms, rest} = many(parser).(rest)
+          {:ok, [first_term | other_terms], rest}
+      end
+    end
+  end
+
+  defp satisfy(parser, acceptor) do
+    fn input ->
+      with {:ok, term, rest} <- parser.(input) do
+        if acceptor.(term) do
+          {:ok, term, rest}
+        else
+          {:error, "term rejected"}
+        end
+      end
+    end
+  end
+
+  defp char(expected) do
+    satisfy(char(), &(&1 == expected))
+  end
+
+  defp char() do
+    fn
+      "" -> {:error, "unexpected eof"}
+      <<char, rest::binary>> -> {:ok, char, rest}
+    end
+  end
+end
+```
+
+```elixir
+defmodule Json do
+  def numbers(json, excluding_objects \\ :none) do
+    json
+    |> leaves(excluding_objects)
+    |> Enum.filter(&is_integer/1)
+  end
+
+  defp leaves(json, exclude_objects)
+  defp leaves(json, _) when is_integer(json), do: [json]
+  defp leaves(json, _) when is_bitstring(json), do: [json]
+
+  defp leaves(json, exclude_objects) when is_list(json) do
+    Enum.reduce(json, [], fn value, acc -> acc ++ leaves(value, exclude_objects) end)
+  end
+
+  defp leaves(json, exclude_objects) when is_map(json) do
+    values = Map.values(json)
+    excluding = to_string(exclude_objects)
+
+    if excluding in values do
+      []
+    else
+      Enum.reduce(Map.values(json), [], fn
+        value, acc -> acc ++ leaves(value, exclude_objects)
+      end)
+    end
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Json.numbers()
+|> Enum.sum()
+```
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Json.numbers(:red)
+|> Enum.sum()
+```

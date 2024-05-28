@@ -13,3 +13,4 @@
 - [Day 9: All in a Single Night](9.livemd)
 - [Day 10: Elves Look, Elves Say](10.livemd)
 - [Day 11: Corporate Policy](11.livemd)
+- [Day 12: JSAbacusFramework.io](12.livemd)
