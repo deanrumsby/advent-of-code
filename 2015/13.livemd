@@ -1,0 +1,113 @@
+# Day 13: Knights of the Dinner Table
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+    |> Enum.reduce(%{}, fn
+      {subject, neighbour, amount}, acc when not is_map_key(acc, subject) ->
+        Map.put(acc, subject, Map.new([{neighbour, amount}]))
+
+      {subject, neighbour, amount}, acc ->
+        Map.put(acc, subject, Map.put(acc[subject], neighbour, amount))
+    end)
+  end
+
+  defp parse_line(input) do
+    {subject, neighbour} = parse_names(input)
+    modifier = parse_modifier(input)
+    amount = parse_amount(input)
+    {subject, neighbour, modifier.(amount)}
+  end
+
+  defp parse_names(input) do
+    Regex.scan(~r/[A-Z]\w+/, input)
+    |> then(fn [[subject], [neighbour]] -> [subject, neighbour] end)
+    |> Enum.map(&String.downcase/1)
+    |> Enum.map(&String.to_atom/1)
+    |> List.to_tuple()
+  end
+
+  defp parse_modifier(input) do
+    Regex.run(~r/gain|lose/, input)
+    |> then(fn
+      ["gain"] -> fn x -> x end
+      ["lose"] -> fn x -> -x end
+    end)
+  end
+
+  defp parse_amount(input) do
+    Regex.run(~r/\d+/, input)
+    |> then(fn [amount] -> amount end)
+    |> String.to_integer()
+  end
+end
+```
+
+```elixir
+defmodule DinnerTable do
+  defstruct [:rules]
+
+  def init(rules), do: %DinnerTable{rules: rules}
+
+  def optimal(table, extras \\ []) do
+    permutations(Map.keys(table.rules) ++ extras)
+    |> Enum.map(&happiness(table, &1))
+    |> Enum.max()
+  end
+
+  defp happiness(table, perm) do
+    (perm ++ [List.first(perm)] ++ Enum.reverse(perm))
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [subject, neighbour] ->
+      Map.get(table.rules, subject, %{}) |> Map.get(neighbour, 0)
+    end)
+    |> Enum.sum()
+  end
+
+  # base case for permutations
+  defp permutations([]), do: [[]]
+
+  # returns a list of all the permutations of elements within 
+  # the provided list
+  defp permutations(list) do
+    for elem <- list, rest <- permutations(list -- [elem]), do: [elem | rest]
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> DinnerTable.init()
+|> DinnerTable.optimal()
+```
+
+## Part 2
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> DinnerTable.init()
+|> DinnerTable.optimal([:dean])
+```
