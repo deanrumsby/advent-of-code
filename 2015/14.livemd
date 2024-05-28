@@ -1,0 +1,94 @@
+# Day 14: Reindeer Olympics
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  defp parse_line(input) do
+    Regex.scan(~r/\d+/, input)
+    |> Enum.map(fn [x] -> String.to_integer(x) end)
+    |> List.to_tuple()
+  end
+end
+```
+
+```elixir
+defmodule Reindeer do
+  def max_distance(reindeers, seconds) do
+    reindeers
+    |> Enum.map(&travel(&1, seconds))
+    |> Enum.map(&List.last/1)
+    |> Enum.max()
+  end
+
+  def max_points(reindeers, seconds) do
+    rdeer_count = length(reindeers)
+
+    reindeers
+    |> Enum.map(&travel(&1, seconds))
+    |> Enum.zip_reduce(Tuple.duplicate(0, rdeer_count), fn
+      dists, acc ->
+        max = Enum.max(dists)
+
+        dists
+        |> Enum.with_index()
+        |> Enum.filter(fn {dist, _index} -> dist == max end)
+        |> Enum.reduce(acc, fn {_dist, index}, acc ->
+          put_elem(acc, index, elem(acc, index) + 1)
+        end)
+    end)
+    |> Tuple.to_list()
+    |> Enum.max()
+  end
+
+  defp travel(reindeer, seconds) do
+    {speed, stamina, rest} = reindeer
+
+    Stream.unfold({0, 0}, fn
+      {time, dist} when rem(time, stamina + rest) < stamina ->
+        travelled = dist + speed
+        {travelled, {time + 1, travelled}}
+
+      {time, dist} ->
+        {dist, {time + 1, dist}}
+    end)
+    |> Enum.take(seconds)
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Reindeer.max_distance(2503)
+```
+
+## Part 2
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Reindeer.max_points(2503)
+```
