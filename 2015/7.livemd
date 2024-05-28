@@ -6,82 +6,35 @@ Mix.install([
 ])
 ```
 
-## Input
-
-```elixir
-input = Kino.Input.textarea("Please paste your puzzle input:")
-```
-
-## Shared Modules
+## Modules
 
 ````elixir
-defmodule Parser do
-  @doc """
-  Parses a string into a list of instruction tuples
-  of form {destination, operation, sources}
-
-  ## Example
-  ```elixir
-  iex> Parser.parse("li AND hk -> hl\\ntu OR su -> pk")
-  [{:hl, :AND, [:li, :hk]}, {:pk, :OR, [:tu, :su]}]
-  ```
-  """
-  def parse(str) do
-    str
-    |> String.split("\n")
-    |> Enum.map(&parse_line/1)
-  end
-
-  # parses single line into instruction form
-  defp parse_line(str) do
-    [expr | [dest]] = String.split(str, " -> ")
-    op_matches = Regex.run(~r/AND|OR|LSHIFT|RSHIFT|NOT/, expr)
-    operand_matches = Regex.scan(~r/\d+|[a-z]+/, expr)
-    {parse_dest(dest), parse_op(op_matches), parse_operands(operand_matches)}
-  end
-
-  # creates atom of destination identifier
-  defp parse_dest(dest) do
-    String.to_atom(dest)
-  end
-
-  # creates atom of operation string
-  defp parse_op(op_matches) do
-    op_matches
-    |> case do
-      nil -> :EQUAL
-      [op] -> String.to_atom(op)
-    end
-  end
-
-  # ensures we have a flat list of integers or identifiers as operands
-  defp parse_operands(operand_matches) do
-    operand_matches
-    |> List.flatten()
-    |> Enum.map(&parse_operand/1)
-  end
-
-  # parses single operand
-  defp parse_operand(operand) do
-    Integer.parse(operand)
-    |> case do
-      :error -> String.to_atom(operand)
-      {integer, _} -> integer
-    end
-  end
-end
-````
-
-```elixir
 defmodule Circuit do
+  @moduledoc """
+  Functions for assembling and inspecting circuits.
+  """
+
   @u16_size 65536
+
+  @type t :: %{wire() => instruction()}
+
+  @type wire :: atom() | integer()
+
+  @type gate :: :EQUAL | :NOT | :AND | :OR | :LSHIFT | :RSHIFT
+
+  @type instruction :: {wire(), gate(), list(wire())}
 
   @doc """
   Creates a new Circuit datastructure
+
+  ## Example
+  ```elixir
+  iex> Circuit.new()
+  %{}
+  ```
   """
-  def new() do
-    Map.new()
-  end
+  @spec new() :: t()
+  def new(), do: %{}
 
   @doc """
   Attaches an identifier and its instruction to the circuit
@@ -137,6 +90,98 @@ defmodule Circuit do
     end
   end
 end
+````
+
+```elixir
+defmodule Test do
+  def resolve_wire(circuit, wire, op, cache \\ %{})
+
+  def resolve_wire(_circuit, wire, _op, cache) when is_map_key(cache, wire) do
+    {cache[wire], cache}
+  end
+
+  def resolve_wire(_circuit, wire, _op, cache) when is_integer(wire) do
+    {wire, cache}
+  end
+
+  def resolve_wire(circuit, wire, op, cache) do
+    {gate, sources} = op
+
+    {resolved_sources, next_cache} =
+      sources
+      |> Enum.map_reduce(cache, &resolve_wire(circuit, &1, circuit[&1], &2))
+
+    result =
+      apply(resolve_gate(gate), resolved_sources)
+      |> Integer.mod(@u16_size)
+
+    {result, Map.put(next_cache, wire, result)}
+  end
+end
+```
+
+````elixir
+defmodule Parser do
+  @doc ~S"""
+  Parses a string into a stream of instructions
+  of form {destination, operation, sources}
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("li AND hk -> hl\ntu OR su -> pk")
+  [{:hl, :AND, [:li, :hk]}, {:pk, :OR, [:tu, :su]}]
+  ```
+  """
+  def parse(str) do
+    str
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  # parses single line into instruction form
+  defp parse_line(str) do
+    [expr | [dest]] = String.split(str, " -> ")
+    op_matches = Regex.run(~r/AND|OR|LSHIFT|RSHIFT|NOT/, expr)
+    operand_matches = Regex.scan(~r/\d+|[a-z]+/, expr)
+    {parse_dest(dest), parse_op(op_matches), parse_operands(operand_matches)}
+  end
+
+  # creates atom of destination identifier
+  defp parse_dest(dest) do
+    String.to_atom(dest)
+  end
+
+  # creates atom of operation string
+  defp parse_op(op_matches) do
+    op_matches
+    |> case do
+      nil -> :EQUAL
+      [op] -> String.to_atom(op)
+    end
+  end
+
+  # ensures we have a flat list of integers or identifiers as operands
+  defp parse_operands(operand_matches) do
+    operand_matches
+    |> List.flatten()
+    |> Enum.map(&parse_operand/1)
+  end
+
+  # parses single operand
+  defp parse_operand(operand) do
+    Integer.parse(operand)
+    |> case do
+      :error -> String.to_atom(operand)
+      {integer, _} -> integer
+    end
+  end
+end
+````
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
 ## Part 1

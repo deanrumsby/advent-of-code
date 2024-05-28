@@ -21,11 +21,14 @@ defmodule Santa do
   @type t :: %__MODULE__{
           x: integer(),
           y: integer(),
-          visited: MapSet.t({integer(), integer()})
+          visited: MapSet.t(location())
         }
 
   @typedoc "The directions Santa can move in"
   @type direction :: :east | :south | :west | :north
+
+  @typedoc "The coordinates for a location"
+  @type location :: {integer(), integer()}
 
   @doc """
   Follow the directions provided for Santa.

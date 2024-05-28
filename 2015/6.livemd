@@ -12,41 +12,83 @@ Mix.install([
 input = Kino.Input.textarea("Please paste your puzzle input:")
 ```
 
-## Shared Modules
+## Modules
 
-```elixir
+````elixir
 defmodule LightGrid do
-  @doc """
-  Creates a nested Map structure to model the light grid. This is significantly
-  more performant than using a single Map.
-  The map has shape: 
-  %{
-    {0, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}}, 
-    {1, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}},
-    ...,
-    {999, %{{0, 0}, {1, 0}, {2, 0}, ..., {999, 0}}},
-  }
+  @moduledoc """
+  Functions for creating and manipulating an (n x m) grid
+  of lights.
   """
-  def new() do
-    Map.new(for x <- 0..999, do: {x, Map.new(for y <- 0..999, do: {y, 0})})
+
+  @typedoc "A LightGrid"
+  @type t :: %{non_neg_integer => light_row()}
+
+  @typedoc "The instruction type"
+  @type action :: :turn_on | :turn_off | :toggle
+
+  @typedoc "The coordinates of a light"
+  @type position :: {non_neg_integer(), non_neg_integer()}
+
+  @typedoc "An instruction"
+  @type instruction :: {action(), position(), position()}
+
+  @typedoc "An alias for the brightness of a light"
+  @type brightness :: non_neg_integer()
+
+  @typedoc "A row of lights."
+  @type light_row :: %{non_neg_integer() => brightness()}
+
+  @typedoc "The rules used when instructing the light grid"
+  @type rules :: :part1 | :part2
+
+  @doc """
+  Creates a nested Map structure to model the light grid, where each row is a
+  Map. Arranging the structure this way is significantly more performant than
+  using a single Map with every tuple of coordinates as keys. 
+  A total tuple is tracked for faster access to the total number of lit lights and
+  their total brightness.
+
+  ## Example
+  ```elixir
+  iex> LightGrid.new(2, 3)
+  %{0 => %{0 => 0, 1 => 0, 2 => 0}, 1 => %{0 => 0, 1 => 0, 2 => 0}}
+  ```
+  """
+  @spec new(pos_integer(), pos_integer()) :: t()
+  def new(n \\ 1000, m \\ 1000) do
+    Map.new(for x <- 0..(n - 1), do: {x, Map.new(for y <- 0..(m - 1), do: {y, 0})})
   end
 
   @doc """
-  Processes an instruction for the light grid.
-  """
-  def instruct(grid, instruction) do
-    {updater, start, finish} = instruction
-    {{x0, y0}, {x1, y1}} = {start, finish}
+  Runs a series of instructions, given a ruleset to follow. 
 
-    y0..y1
-    |> Enum.reduce(grid, fn
-      y, acc -> update_row(acc, y, x0, x1, updater)
-    end)
+  ## Example
+  ```elixir
+  iex> instructions = [{:turn_on, {0, 0}, {0, 1}}, {:toggle, {0, 0}, {1, 1}}]
+  iex> LightGrid.new(2, 2)
+  iex> |> LightGrid.run(instructions, :part1)
+  %{0 => %{0 => 0, 1 => 1}, 1 => %{0 => 0, 1 => 1}}
+  ```
+  """
+  @spec run(t(), Enumerable.t(instruction()), rules()) :: t()
+  def run(grid, instructions, rules) do
+    instructions
+    |> Enum.reduce(grid, &instruct(&2, &1, rules))
   end
 
   @doc """
   Counts the number of lights that are on.
+
+  ## Example
+  ```elixir
+  iex> LightGrid.new(3, 3)
+  iex> |> LightGrid.run([{:turn_on, {0, 0}, {2, 2}}], :part1)
+  iex> |> LightGrid.lit_count()
+  9
+  ```
   """
+  @spec lit_count(t()) :: non_neg_integer()
   def lit_count(grid) do
     grid
     |> lit()
@@ -55,11 +97,30 @@ defmodule LightGrid do
 
   @doc """
   Returns the total brightness of all the lights
+    ## Example
+  ```elixir
+  iex> LightGrid.new(2, 2)
+  iex> |> LightGrid.run([{:toggle, {0, 0}, {0, 1}}], :part2)
+  iex> |> LightGrid.total_brightness()
+  4
+  ```
   """
+  @spec total_brightness(t()) :: non_neg_integer()
   def total_brightness(grid) do
     grid
     |> lit()
     |> Enum.reduce(0, fn {_col, val}, acc -> acc + val end)
+  end
+
+  # processes a single instruction
+  defp instruct(grid, instruction, rules) do
+    {action, start, finish} = instruction
+    {{x0, y0}, {x1, y1}} = {start, finish}
+
+    y0..y1
+    |> Enum.reduce(grid, fn
+      y, acc -> update_row(acc, y, x0, x1, updater(action, rules))
+    end)
   end
 
   # returns a list of all the lit lights
@@ -84,22 +145,52 @@ defmodule LightGrid do
   defp filter_lit(row) do
     Map.filter(row, fn {_col, val} -> val > 0 end)
   end
-end
-```
 
-```elixir
-defmodule InstructionParser do
-  @doc """
-  Parses a string into an instruction with respect to rules provided. 
-  Rules is a function that has the form
-  (:toggle | :turn_on | :turn_off) -> (state -> new_state)
+  # the lambda to use when updating
+  defp updater(action, rules)
+
+  # rules for part1 
+  defp updater(:turn_on, :part1), do: fn _val -> 1 end
+  defp updater(:turn_off, :part1), do: fn _val -> 0 end
+  defp updater(:toggle, :part1), do: fn val -> if(val == 0, do: 1, else: 0) end
+
+  # rules for part2
+  defp updater(:turn_on, :part2), do: fn val -> val + 1 end
+  defp updater(:turn_off, :part2), do: fn val -> if(val > 0, do: val - 1, else: 0) end
+  defp updater(:toggle, :part2), do: fn val -> val + 2 end
+end
+````
+
+````elixir
+defmodule Parser do
+  @moduledoc """
+  For parsing text into instructions to use with a light grid.
   """
-  def parse(str, rules) do
+
+  @doc ~S"""
+  Parses a string into a stream of instructions.
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("toggle 107,322 through 378,688\nturn off 235,899 through 818,932")
+  iex> |> Enum.to_list()
+  [{:toggle, {107, 322}, {378, 688}}, {:turn_off, {235, 899}, {818, 932}}]
+  ```
+  """
+  @spec parse(String.t()) :: Enumerable.t(LightGrid.instruction())
+  def parse(str) do
+    str
+    |> String.split("\n")
+    |> Stream.map(&parse_line/1)
+  end
+
+  # parse a single instruction
+  defp parse_line(str) do
     pattern = ~r/(turn on|turn off|toggle) (\d+,\d+) through (\d+,\d+)/
     [inst_type, start, finish] = Regex.run(pattern, str, capture: :all_but_first)
 
     {
-      rules.(parse_type(inst_type)),
+      parse_action(inst_type),
       parse_tuple(start),
       parse_tuple(finish)
     }
@@ -113,64 +204,29 @@ defmodule InstructionParser do
   end
 
   # parse a type eg. "turn on" into an atom :turn_on
-  defp parse_type(str) do
-    case str do
-      "turn on" -> :turn_on
-      "turn off" -> :turn_off
-      "toggle" -> :toggle
-    end
-  end
+  defp parse_action(str)
+  defp parse_action("turn on"), do: :turn_on
+  defp parse_action("turn off"), do: :turn_off
+  defp parse_action("toggle"), do: :toggle
 end
-```
+````
 
 ## Part 1
 
 ```elixir
-defmodule Part1 do
-  @doc """
-  Rules for the instruction types.
-  """
-  def rules(inst_type) do
-    case inst_type do
-      :turn_on -> fn _val -> 1 end
-      :turn_off -> fn _val -> 0 end
-      :toggle -> fn val -> if(val == 0, do: 1, else: 0) end
-    end
-  end
-end
-```
-
-```elixir
 input
 |> Kino.Input.read()
-|> String.split("\n")
-|> Stream.map(fn str -> InstructionParser.parse(str, &Part1.rules/1) end)
-|> Enum.reduce(LightGrid.new(), &LightGrid.instruct(&2, &1))
+|> Parser.parse()
+|> then(&LightGrid.run(LightGrid.new(), &1, :part1))
 |> LightGrid.lit_count()
 ```
 
 ## Part 2
 
 ```elixir
-defmodule Part2 do
-  @doc """
-  Rules for the instruction types.
-  """
-  def rules(inst_type) do
-    case inst_type do
-      :turn_on -> fn val -> val + 1 end
-      :turn_off -> fn val -> if(val > 0, do: val - 1, else: 0) end
-      :toggle -> fn val -> val + 2 end
-    end
-  end
-end
-```
-
-```elixir
 input
 |> Kino.Input.read()
-|> String.split("\n")
-|> Stream.map(fn str -> InstructionParser.parse(str, &Part2.rules/1) end)
-|> Enum.reduce(LightGrid.new(), &LightGrid.instruct(&2, &1))
+|> Parser.parse()
+|> then(&LightGrid.run(LightGrid.new(), &1, :part2))
 |> LightGrid.total_brightness()
 ```
