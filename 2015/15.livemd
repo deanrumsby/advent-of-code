@@ -1,0 +1,159 @@
+# Day 15: Science for Hungry People
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Ingredient do
+  @moduledoc """
+  An ingredient
+  """
+
+  defstruct [:capacity, :durability, :flavour, :texture, :calories]
+
+  @typedoc "Ingredient struct"
+  @type t :: %__MODULE__{
+          capacity: integer(),
+          durability: integer(),
+          flavour: integer(),
+          texture: integer(),
+          calories: integer()
+        }
+end
+```
+
+````elixir
+defmodule Parser do
+  @moduledoc """
+  Enables parsing a newline separated list of ingredients
+  """
+
+  @doc """
+  Converts a newline separated list of ingredients into 
+  a list of Ingredient structs
+
+  ## Example
+  ```elixir
+  iex> Parser.parse("Sprinkles: capacity 5, durability -1, flavor 0, texture 0, calories 5)")
+  [%Ingredient{capacity: 5, durability: -1, flavour: 0, texture: 0, calories: 5}]
+  ```
+  """
+  @spec parse(String.t()) :: list(Ingredient.t())
+  def parse(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  # converts a single line into an ingredient
+  defp parse_line(input) do
+    Regex.scan(~r/-?\d+/, input)
+    |> List.flatten()
+    |> Enum.map(&String.to_integer/1)
+    |> create_ingredient()
+  end
+
+  # creates an ingredient
+  defp create_ingredient(list) do
+    [cap, dur, fla, tex, cal] = list
+
+    %Ingredient{
+      capacity: cap,
+      durability: dur,
+      flavour: fla,
+      texture: tex,
+      calories: cal
+    }
+  end
+end
+````
+
+```elixir
+defmodule Cookie do
+  @moduledoc """
+  Functions for scoring cookies. Based on recipes using 100 teaspoons.
+  """
+
+  @teaspoon_count 100
+
+  @doc """
+  Calculates the best score a cookie can obtain with the given ingredients. 
+  Takes an optional calorie value to constrain by.
+  """
+  def best_score(ingredients, calories \\ nil)
+
+  # no filtering by calories
+  def best_score(ingredients, nil) do
+    combinations(@teaspoon_count, length(ingredients))
+    |> Enum.map(&score(ingredients, &1))
+    |> Enum.max()
+  end
+
+  # results are filtered so only cookies with the exact calorie amount
+  # are considered
+  def best_score(ingredients, calories) do
+    combinations(100, length(ingredients))
+    |> Enum.filter(&(property(ingredients, &1, :calories) == calories))
+    |> Enum.map(&score(ingredients, &1))
+    |> Enum.max()
+  end
+
+  # calculates the score for a particular combination
+  defp score(ingredients, combination) do
+    Enum.map(
+      [:capacity, :durability, :flavour, :texture],
+      &property(ingredients, combination, &1)
+    )
+    |> Enum.product()
+  end
+
+  # calculates a given property for the cookie
+  # which is a linear combination of each ingredients matching
+  # property, scaled by the current combination.
+  defp property(ingredients, combination, property) do
+    Enum.zip_with(ingredients, combination, fn
+      ingredient, scalar -> Map.get(ingredient, property) * scalar
+    end)
+    |> Enum.sum()
+    |> max(0)
+  end
+
+  # determines all combinations of natural numbers that sum to a given value 
+  defp combinations(sum, elts)
+
+  defp combinations(sum, 1), do: [[sum]]
+
+  defp combinations(sum, elts) do
+    for n <- 0..sum, rest <- combinations(sum - n, elts - 1), do: [n | rest]
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Cookie.best_score()
+```
+
+## Part 2
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Cookie.best_score(500)
+```
