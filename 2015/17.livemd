@@ -1,0 +1,90 @@
+# Day 17: No Such Thing as Too Much
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&String.to_integer/1)
+  end
+end
+```
+
+```elixir
+defmodule Combinations do
+  @moduledoc """
+  Functions to facilitate finding combinations of lists of elements.
+  """
+
+  @doc """
+  Finds all combinations of a given list of positive integers that sum
+  to the total.
+  """
+  @spec sum_to(list(pos_integer()), pos_integer()) :: list(list(pos_integer()))
+  def sum_to(elts, total)
+
+  # base case when find a succesful combination
+  def sum_to(_elts, 0), do: [[]]
+
+  # base case when there are no elts remaining and non zero total
+  def sum_to([], _total), do: []
+
+  # general case
+  def sum_to(elts, total) do
+    [first | rest] = elts
+
+    # we find all sequences that include the first element
+    left =
+      sum_to(rest, total - first)
+      |> Enum.map(fn elts -> [first | elts] end)
+
+    # and all sequences that do not include the first element
+    right = sum_to(rest, total)
+
+    # and then join them
+    left ++ right
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Combinations.sum_to(150)
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+combinations =
+  input
+  |> Kino.Input.read()
+  |> Parser.parse()
+  |> Combinations.sum_to(150)
+
+minimum =
+  combinations
+  |> Enum.map(&length/1)
+  |> Enum.min()
+
+combinations
+|> Enum.count(&(length(&1) == minimum))
+```

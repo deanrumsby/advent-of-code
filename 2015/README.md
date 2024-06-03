@@ -17,3 +17,5 @@
 - [Day 13: Knights of the Dinner Table](13.livemd)
 - [Day 14: Reindeer Olympics](14.livemd)
 - [Day 15: Science for Hungry People](15.livemd)
+- [Day 16: Aunt Sue](16.livemd)
+- [Day 17: No Such Thing as Too Much](17.livemd)

@@ -1,0 +1,173 @@
+# Day 16: Aunt Sue
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.12.3"}
+])
+```
+
+## Modules
+
+```elixir
+defmodule Sue do
+  @moduledoc """
+  Aunt Sue
+  """
+
+  defstruct [
+    :id,
+    :children,
+    :cats,
+    :samoyeds,
+    :pomeranians,
+    :akitas,
+    :vizslas,
+    :goldfish,
+    :trees,
+    :cars,
+    :perfumes
+  ]
+
+  @type t :: %__MODULE__{
+          id: pos_integer(),
+          children: non_neg_integer() | nil,
+          cats: non_neg_integer() | nil,
+          samoyeds: non_neg_integer() | nil,
+          pomeranians: non_neg_integer() | nil,
+          akitas: non_neg_integer() | nil,
+          vizslas: non_neg_integer() | nil,
+          goldfish: non_neg_integer() | nil,
+          trees: non_neg_integer() | nil,
+          cars: non_neg_integer() | nil,
+          perfumes: non_neg_integer() | nil
+        }
+
+  @doc """
+  Finds potential matches from a list of Sues, given some properties.
+  """
+  def find(sues, properties, rules \\ :part1) do
+    sues
+    |> Enum.filter(&match?(&1, properties, rules))
+  end
+
+  # compares Aunt Sue with a set of given properties, to see if they 
+  # potentially match.
+  defp match?(sue, props, rules)
+
+  # part 1 matches when each property is equal or nil
+  defp match?(sue, props, :part1) do
+    props
+    |> Enum.all?(fn
+      {key, value} ->
+        sue_value = Map.get(sue, key)
+        is_nil(sue_value) || sue_value == value
+    end)
+  end
+
+  # part 2 matches with slightly different rules
+  defp match?(sue, props, :part2) do
+    props
+    |> Enum.all?(fn
+      {key, value} ->
+        sue_value = Map.get(sue, key)
+
+        case key do
+          :cats -> is_nil(sue_value) || sue_value > value
+          :trees -> is_nil(sue_value) || sue_value > value
+          :pomeranians -> is_nil(sue_value) || sue_value < value
+          :goldfish -> is_nil(sue_value) || sue_value < value
+          _key -> is_nil(sue_value) || sue_value == value
+        end
+    end)
+  end
+end
+```
+
+```elixir
+defmodule Parser do
+  @moduledoc """
+  Enables parsing text into Aunt Sue structs
+  """
+
+  @doc """
+
+  """
+  def parse(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  def parse_line(line) do
+    id =
+      Regex.run(~r/\d+/, line)
+      |> Enum.map(&String.to_integer/1)
+      |> then(fn [id] -> id end)
+
+    props =
+      Regex.scan(~r/\w+: \d+/, line)
+      |> List.flatten()
+      |> Enum.map(&parse_props/1)
+
+    struct(Sue, [id: id] ++ props)
+  end
+
+  def parse_props(props) do
+    props
+    |> String.split(": ")
+    |> then(fn
+      [key, value] -> {String.to_atom(key), String.to_integer(value)}
+    end)
+  end
+end
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please paste your puzzle input:")
+```
+
+## Part 1
+
+```elixir
+props = [
+  children: 3,
+  cats: 7,
+  samoyeds: 2,
+  pomeranians: 3,
+  akitas: 0,
+  vizslas: 0,
+  goldfish: 5,
+  trees: 3,
+  cars: 2,
+  perfumes: 1
+]
+
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Sue.find(props)
+```
+
+## Part 2
+
+```elixir
+props = [
+  children: 3,
+  cats: 7,
+  samoyeds: 2,
+  pomeranians: 3,
+  akitas: 0,
+  vizslas: 0,
+  goldfish: 5,
+  trees: 3,
+  cars: 2,
+  perfumes: 1
+]
+
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Sue.find(props, :part2)
+```
