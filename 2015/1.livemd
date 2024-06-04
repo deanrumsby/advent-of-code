@@ -28,7 +28,7 @@ defmodule Santa do
   2
   ```
   """
-  @spec follow(Enumerable.t(direction())) :: integer()
+  @spec follow(list(direction())) :: integer()
   def follow(directions) do
     directions
     |> Enum.reduce(0, &next_floor/2)
@@ -36,7 +36,7 @@ defmodule Santa do
 
   @doc """
   Finds the position such that Santa first enters a specified floor, given
-  a sequence of directions.
+  a list of directions.
 
   ## Example
   ```elixir
@@ -45,7 +45,7 @@ defmodule Santa do
   4
   ```
   """
-  @spec find_floor(Enumerable.t(direction()), integer()) :: pos_integer()
+  @spec find_floor(list(direction()), integer()) :: pos_integer()
   def find_floor(directions, desired_floor) do
     directions
     |> Stream.with_index()
@@ -68,19 +68,18 @@ defmodule Parser do
   """
 
   @doc """
-  Parses a string of parentheses into a stream of directions.
+  Parses a string of parentheses into a list of directions.
 
   ## Example
   ```elixir
   iex> Parser.parse("))(()")
-  iex> |> Enum.to_list()
   [:down, :down, :up, :up, :down]
   """
-  @spec parse(String.t()) :: Enumerable.t(Santa.direction())
+  @spec parse(String.t()) :: list(Santa.direction())
   def parse(str) do
     str
     |> String.graphemes()
-    |> Stream.map(&direction/1)
+    |> Enum.map(&direction/1)
   end
 
   defp direction(symbol)
