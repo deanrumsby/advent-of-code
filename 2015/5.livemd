@@ -18,30 +18,38 @@ defmodule NiceStrings do
   @type rules :: :part1 | :part2
 
   @doc """
-  Identifies if a string is nice, given a ruleset.
+  Counts the number of strings that are "nice" according to a specified
+  ruleset.
 
   ## Examples
   ```elixir
-  iex> NiceStrings.nice_string?("ugknbfddgicrmopn", :part1)
-  true
-  iex> NiceStrings.nice_string?("jchzalrnumimnmhp", :part1)
-  false
-  iex> NiceStrings.nice_string?("qjhvhtzxzqqjkmpb", :part2)
-  true
-  iex> NiceStrings.nice_string?("uurcxstgmygtbstg", :part2)
-  false
+  iex> ["ugknbfddgicrmopn", "jchzalrnumimnmhp", "aaa"]
+  iex> |> NiceStrings.count(:part1)
+  2
+
+  iex> ["qjhvhtzxzqqjkmpb", "ieodomkazucvgmuy", "uurcxstgmygtbstg"]
+  iex> |> NiceStrings.count(:part2)
+  1
   ```
   """
-  @spec nice_string?(String.t(), rules()) :: boolean()
-  def nice_string?(str, rules)
+  @spec count(list(String.t()), rules()) :: non_neg_integer()
+  def count(strings, rules) do
+    strings
+    |> Enum.count(&nice_string?(&1, rules))
+  end
 
-  def nice_string?(str, :part1) do
+  # validates if string is nice
+  defp nice_string?(str, rules)
+
+  # using rules for part 1
+  defp nice_string?(str, :part1) do
     contains_three_vowels?(str) and
       contains_double_letter?(str) and
       not contains_illegal_substring?(str)
   end
 
-  def nice_string?(str, :part2) do
+  # using rules for part 2
+  defp nice_string?(str, :part2) do
     contains_pair_twice?(str) and
       contains_repeat_with_letter_between?(str)
   end
@@ -75,7 +83,7 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Enum.count(&NiceStrings.nice_string?(&1, :part1))
+|> NiceStrings.count(:part1)
 ```
 
 ## Part 2
@@ -84,5 +92,5 @@ input
 input
 |> Kino.Input.read()
 |> String.split("\n")
-|> Enum.count(&NiceStrings.nice_string?(&1, :part2))
+|> NiceStrings.count(:part2)
 ```

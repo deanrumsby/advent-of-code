@@ -97,10 +97,6 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-We need a way to follow all the directions given to us by the Elves. We start by mapping our input string into a sequence of directions `:up` and `:down`, using `Parser.parse/1`. We could have used the characters `')'` and `'('` directly, however I prefer to decouple the input from the rest of the functions we create.
-
-To follow the directions, I create a function `Santa.follow/1` which takes the directions and returns the floor number Santa arrives at by following them.
-
 ```elixir
 input
 |> Kino.Input.read()
@@ -109,10 +105,6 @@ input
 ```
 
 ## Part 2
-
-In part 2 we still parse the directions the same as before, but now we need to create a new function to help us find the basement.
-
-The function `Sata.find_floor/1` takes in the stream of directions and returns the position of the first direction that causes Santa to enter the specified floor.
 
 ```elixir
 input

@@ -19,7 +19,7 @@ defmodule Present do
   @type box :: {pos_integer(), pos_integer(), pos_integer()}
 
   @doc """
-  Calculates the total wrapping paper needed for a sequence of boxes.
+  Calculates the total wrapping paper needed for a list of boxes.
 
   ## Example
   ```elixir
@@ -27,7 +27,7 @@ defmodule Present do
   81 
   ```
   """
-  @spec total_wrapping_paper(Enumerable.t(box())) :: pos_integer()
+  @spec total_wrapping_paper(list(box())) :: pos_integer()
   def total_wrapping_paper(boxes) do
     boxes
     |> Stream.map(&wrapping_paper/1)
@@ -35,7 +35,7 @@ defmodule Present do
   end
 
   @doc """
-  Calculates the total ribbon needed for a sequence of boxes.
+  Calculates the total ribbon needed for a list of boxes.
 
   ## Example
   ```elixir
@@ -43,7 +43,7 @@ defmodule Present do
   43
   ```
   """
-  @spec total_ribbon(Enumerable.t(box())) :: pos_integer()
+  @spec total_ribbon(list(box())) :: pos_integer()
   def total_ribbon(boxes) do
     boxes
     |> Stream.map(&ribbon/1)
@@ -89,25 +89,24 @@ end
 ````elixir
 defmodule Parser do
   @moduledoc """
-  For parsing a string into a stream of box types
+  For parsing a string into a list of box types.
   """
 
   @doc ~S"""
   Takes a string of newline separated dimensions and 
-  returns a stream of boxes
+  returns a list of boxes.
 
   ## Example
   ```elixir
   iex> Parser.parse("4x2x8\n5x6x7")
-  iex> |> Enum.to_list()
   [{4, 2, 8}, {5, 6, 7}]
   ```
   """
-  @spec parse(String.t()) :: Enumerable.t(Present.box())
+  @spec parse(String.t()) :: list(Present.box())
   def parse(str) do
     str
     |> String.split("\n")
-    |> Stream.map(&parse_line/1)
+    |> Enum.map(&parse_line/1)
   end
 
   # parse a line eg. "5x2x3" maps to {5, 2, 3}
@@ -128,8 +127,6 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-First we need to parse the input into a form we can use. `Parser.parse/1` creates a stream of box types, which are tuples of the form `{length, width, height}`. Now we just need to calculate the wrapping paper needed for each box and take the sum, which is handled by passing the stream into `Present.total_wrapping_paper/1`.
-
 ```elixir
 input
 |> Kino.Input.read()
@@ -138,8 +135,6 @@ input
 ```
 
 ## Part 2
-
-In part 2 we are finding the total ribbon required, so we pass our stream of boxes into `Present.total_ribbon/1` instead.
 
 ```elixir
 input

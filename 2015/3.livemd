@@ -32,72 +32,75 @@ defmodule Santa do
 
   @doc """
   Follow the directions provided for Santa.
-  When Santa moves, any newly visited locations are also stored.
+  When Santa moves, any newly visited locations are recorded under
+  the :visited field.
 
   ## Example
   ```elixir
-  iex> Santa.follow(%Santa{}, [:east, :north, :north])
-  %Santa{x: 1, y: 2, visited: MapSet.new([{0,0}, {1, 0}, {1, 1}, {1, 2}])}
+  iex> [:north, :north, :east]
+  iex> |> Santa.follow()
+  %Santa{x: 1, y: 2, visited: MapSet.new([{0, 0}, {0, 1}, {0, 2}, {1, 2}])}
   ```
   """
-  @spec follow(Santa.t(), list(direction())) :: Santa.t()
-  def follow(santa, directions) do
+  @spec follow(list(direction())) :: t()
+  def follow(directions) do
     directions
-    |> Enum.reduce(santa, &move(&2, &1))
+    |> Enum.reduce(%Santa{}, &move(&2, &1))
   end
 
   @doc """
-  Follow the directions provided for Santa, shared with Robo-Santa. 
-  Each pair of directions are split between Santa and Robo-Santa. 
-  Each Santa stores it's newly visited locations on each move.
+  Shares the directions with another Santa. A direction is given to the first
+  Santa, then the next direction is given to the second Santa, and so on...
 
   ## Example
   ```elixir
-  iex> Santa.follow(%Santa{}, %Santa{}, [:south, :west])
+  iex> [:north, :north, :east, :south]
+  iex> |> Santa.follow_with_helper()
   [
-    %Santa{x: 0, y: -1, visited: MapSet.new([{0, 0}, {0, -1}])},
-    %Santa{x: -1, y: 0, visited: MapSet.new([{0, 0}, {-1, 0}])},
+    %Santa{x: 1, y: 1, visited: MapSet.new([{0, 0}, {0, 1}, {1, 1}])},
+    %Santa{x: 0, y: 0, visited: MapSet.new([{0, 0}, {0, 1}])}
   ]
-  ```
   """
-  @spec follow(Santa.t(), Santa.t(), list(direction())) :: list(Santa.t())
-  def follow(santa, robo_santa, directions) do
+  @spec follow_with_helper(list(direction())) :: list(t())
+  def follow_with_helper(directions) do
     directions
     |> Enum.chunk_every(2)
-    |> Enum.reduce([santa, robo_santa], fn
+    |> Enum.reduce([%Santa{}, %Santa{}], fn
       directions, santas -> Enum.zip_with(santas, directions, &move/2)
     end)
   end
 
   @doc """
-  The total number of unique locations visited by Santa.
+  Returns the total number of unique locations visited by the santa(s)
+  including the start position of {0, 0}.
 
   ## Example
   ```elixir
-  iex> Santa.follow(%Santa{}, [:east, :west, :east, :west])
+  iex> [:north, :north, :south, :south]
+  iex> |> Santa.follow()
+  iex> |> Santa.total_visited()
+  3
+
+  iex> [:north, :north, :south, :south]
+  iex> |> Santa.follow_with_helper()
   iex> |> Santa.total_visited()
   2
   ```
   """
-  @spec total_visited(Santa.t()) :: pos_integer()
-  def total_visited(santa) do
-    MapSet.size(santa.visited)
+  @spec total_visited(t() | list(t())) :: pos_integer()
+  def total_visited(santas)
+
+  # single santa
+  def total_visited(santa) when is_map(santa) do
+    santa.visited
+    |> MapSet.size()
   end
 
-  @doc """
-  The total number of unique locations visited by Santa and Robo-Santa
-  combined.
-
-  ## Example
-  ```elixir
-  iex> [santa, robo_santa] = Santa.follow(%Santa{}, %Santa{}, [:east, :west, :east, :west])
-  iex> Santa.total_visited(santa, robo_santa)
-  5
-  ```
-  """
-  @spec total_visited(Santa.t(), Santa.t()) :: pos_integer()
-  def total_visited(santa, robo_santa) do
-    MapSet.union(santa.visited, robo_santa.visited)
+  # a list of santas
+  def total_visited(santas) do
+    santas
+    |> Enum.map(&Map.get(&1, :visited))
+    |> Enum.reduce(&MapSet.union(&2, &1))
     |> MapSet.size()
   end
 
@@ -124,24 +127,23 @@ end
 ````elixir
 defmodule Parser do
   @moduledoc """
-  For parsing a string into a stream of directions.
+  For parsing a string into a list of directions.
   """
 
   @doc """
-  Parses a string into a stream of directions.
+  Parses a string into a list of directions.
 
   ## Example
   ```elixir
   iex> Parser.parse("><^^v")
-  iex> |> Enum.to_list()
   [:east, :west, :north, :north, :south]
   ```
   """
-  @spec parse(String.t()) :: Enumerable.t(Santa.direction())
+  @spec parse(String.t()) :: list(Santa.direction())
   def parse(str) do
     str
     |> String.graphemes()
-    |> Stream.map(&direction/1)
+    |> Enum.map(&direction/1)
   end
 
   # parse direction
@@ -165,18 +167,16 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 input
 |> Kino.Input.read()
 |> Parser.parse()
-|> then(&Santa.follow(%Santa{}, &1))
+|> Santa.follow()
 |> Santa.total_visited()
 ```
 
 ## Part 2
 
 ```elixir
-[santa, robo_santa] =
-  input
-  |> Kino.Input.read()
-  |> Parser.parse()
-  |> then(&Santa.follow(%Santa{}, %Santa{}, &1))
-
-Santa.total_visited(santa, robo_santa)
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Santa.follow_with_helper()
+|> Santa.total_visited()
 ```
