@@ -16,121 +16,133 @@ defmodule Circuit do
 
   @u16_size 65536
 
-  @type t :: %{wire() => instruction()}
+  @typedoc "A circuit"
+  @type t :: %{atom() => connection()}
 
-  @type wire :: atom() | integer()
+  @typedoc "An instruction for building the circuit"
+  @type instruction :: {atom(), connection()}
 
-  @type gate :: :EQUAL | :NOT | :AND | :OR | :LSHIFT | :RSHIFT
-
-  @type instruction :: {wire(), gate(), list(wire())}
+  @typedoc "The connections possible for each instruction"
+  @type connection ::
+          {:AND, connection(), connection()}
+          | {:OR, connection(), connection()}
+          | {:LSHIFT, connection(), {:SIGNAL, non_neg_integer()}}
+          | {:RSHIFT, connection(), {:SIGNAL, non_neg_integer()}}
+          | {:NOT, connection()}
+          | {:WIRE, atom()}
+          | {:SIGNAL, non_neg_integer()}
 
   @doc """
-  Creates a new Circuit datastructure
+  Builds a circuit from a list of instructions.
 
   ## Example
   ```elixir
-  iex> Circuit.new()
-  %{}
+  iex> [{:fy, {:NOT, {:WIRE, :fx}}}, {:fx, {:SIGNAL, 10}}]
+  iex> |> Circuit.build()
+  %{
+    fy: {:NOT, {:WIRE, :fx}}, 
+    fx: {:SIGNAL, 10},
+  }
   ```
   """
-  @spec new() :: t()
-  def new(), do: %{}
-
-  @doc """
-  Attaches an identifier and its instruction to the circuit
-  A key value pair will have shape: %{cd: {:rv, :NOT, [:xt]}}
-  """
-  def add_connection(circuit, instruction) do
-    Map.put(circuit, elem(instruction, 0), instruction)
+  @spec build(list(instruction())) :: t()
+  def build(instructions) do
+    instructions
+    |> Enum.reduce(%{}, fn
+      instruction, circuit ->
+        {wire, connection} = instruction
+        Map.put(circuit, wire, connection)
+    end)
   end
 
   @doc """
-  Evaluates the signal for a specific wire identifier
+  Calculates the signal on a given wire.
+
+  ## Example
+  ```elixir
+  iex> %{a: {:LSHIFT, {:WIRE, :b}, {:SIGNAL, 1}}, b: {:SIGNAL, 8}}
+  iex> |> Circuit.get_signal(:a)
+  16
+  ```
   """
-  def get_signal(circuit, identifier) do
-    resolve_wire(circuit, circuit[identifier])
+  def get_signal(circuit, wire) do
+    resolve(circuit, circuit[wire], %{})
     |> elem(0)
   end
 
   @doc """
-  Overrides a signal for a specific wire identifier and returns the Circuit.
+  Overrides a signal for a specific wire identifier.
+
+  ## Example
+  ```elixir
+  iex> %{b: {:SIGNAL, 10}}
+  iex> |> Circuit.put_signal(:b, 50)
+  %{b: {:SIGNAL, 50}}
+  ```
   """
-  def put_signal(circuit, identifier, value) do
-    Map.put(circuit, identifier, {identifier, :EQUAL, [value]})
+  def put_signal(circuit, wire, value) do
+    Map.put(circuit, wire, {:SIGNAL, value})
   end
 
-  # recursively evaluates the wires, using a cache to store previously 
-  # evaluated answers for fast lookup.
-  # works by mapping over the sources and resolving them, whilst passing along the cache.
-  # once the arguments have been resolved, then applies the instruction operation
-  # to the list of arguments before returning the result and cache.
-  # all results are modulo 2^16 to ensure 16 bit width.
-  defp resolve_wire(circuit, instruction, cache \\ Map.new()) do
-    {dest, op, sources} = instruction
+  # recursively resolves a connection, with the aid of a cache
+  defp resolve(circuit, connection, cache)
 
-    {args, next_cache} =
-      Enum.map_reduce(sources, cache, fn
-        value, c when is_integer(value) -> {value, c}
-        id, c -> if c[id], do: {c[id], c}, else: resolve_wire(circuit, circuit[id], c)
-      end)
+  # when value is in the cache
+  defp resolve(_circuit, {:WIRE, wire}, cache) when is_map_key(cache, wire),
+    do: {cache[wire], cache}
 
-    result = apply(gate(op), args) |> Integer.mod(@u16_size)
-    {result, Map.put(next_cache, dest, result)}
+  # when value is not in the cache
+  defp resolve(circuit, {:WIRE, wire}, cache) do
+    {result, cache} = resolve(circuit, circuit[wire], cache)
+    {result, Map.put(cache, wire, result)}
   end
 
-  # defines the functions used to evaluate each operation type
-  defp gate(op) do
-    case op do
-      :EQUAL -> fn a -> a end
-      :AND -> fn a, b -> Bitwise.band(a, b) end
-      :OR -> fn a, b -> Bitwise.bor(a, b) end
-      :LSHIFT -> fn a, b -> Bitwise.bsl(a, b) end
-      :RSHIFT -> fn a, b -> Bitwise.bsr(a, b) end
-      :NOT -> fn a -> Bitwise.bnot(a) end
+  defp resolve(_circuit, {:SIGNAL, value}, cache), do: {value, cache}
+
+  defp resolve(circuit, {:NOT, a}, cache),
+    do: unary(circuit, a, &Bitwise.bnot/1, cache)
+
+  defp resolve(circuit, {:AND, a, b}, cache),
+    do: binary(circuit, a, b, &Bitwise.&&&/2, cache)
+
+  defp resolve(circuit, {:OR, a, b}, cache),
+    do: binary(circuit, a, b, &Bitwise.|||/2, cache)
+
+  defp resolve(circuit, {:LSHIFT, a, value}, cache),
+    do: binary(circuit, a, value, &Bitwise.<<</2, cache)
+
+  defp resolve(circuit, {:RSHIFT, a, value}, cache),
+    do: binary(circuit, a, value, &Bitwise.>>>/2, cache)
+
+  # used to resolve a single operand and apply a unary operation
+  # to the results
+  # the final result is reduced to fit in 16 bits
+  defp unary(circuit, right, function, cache) do
+    with {right, cache} <- resolve(circuit, right, cache) do
+      {function.(right) |> Integer.mod(@u16_size), cache}
+    end
+  end
+
+  # used to resolve a pair of operands and apply a binary operation
+  # to the results
+  # the final result is reduced to fit in 16 bits
+  defp binary(circuit, left, right, function, cache) do
+    with {left, cache} <- resolve(circuit, left, cache),
+         {right, cache} <- resolve(circuit, right, cache) do
+      {function.(left, right) |> Integer.mod(@u16_size), cache}
     end
   end
 end
 ````
 
 ```elixir
-defmodule Test do
-  def resolve_wire(circuit, wire, op, cache \\ %{})
-
-  def resolve_wire(_circuit, wire, _op, cache) when is_map_key(cache, wire) do
-    {cache[wire], cache}
-  end
-
-  def resolve_wire(_circuit, wire, _op, cache) when is_integer(wire) do
-    {wire, cache}
-  end
-
-  def resolve_wire(circuit, wire, op, cache) do
-    {gate, sources} = op
-
-    {resolved_sources, next_cache} =
-      sources
-      |> Enum.map_reduce(cache, &resolve_wire(circuit, &1, circuit[&1], &2))
-
-    result =
-      apply(resolve_gate(gate), resolved_sources)
-      |> Integer.mod(@u16_size)
-
-    {result, Map.put(next_cache, wire, result)}
-  end
-end
-```
-
-````elixir
 defmodule Parser do
-  @doc ~S"""
-  Parses a string into a stream of instructions
-  of form {destination, operation, sources}
+  @moduledoc """
+  For parsing a string into circuit instructions.
+  """
 
-  ## Example
-  ```elixir
-  iex> Parser.parse("li AND hk -> hl\ntu OR su -> pk")
-  [{:hl, :AND, [:li, :hk]}, {:pk, :OR, [:tu, :su]}]
-  ```
+  @doc ~S"""
+  Parses a string into a list of instructions.
   """
   def parse(str) do
     str
@@ -141,24 +153,28 @@ defmodule Parser do
   # parses single line into instruction form
   defp parse_line(str) do
     [expr | [dest]] = String.split(str, " -> ")
-    op_matches = Regex.run(~r/AND|OR|LSHIFT|RSHIFT|NOT/, expr)
-    operand_matches = Regex.scan(~r/\d+|[a-z]+/, expr)
-    {parse_dest(dest), parse_op(op_matches), parse_operands(operand_matches)}
+    wire = String.to_atom(dest)
+    op = Regex.run(~r/AND|OR|LSHIFT|RSHIFT|NOT/, expr) |> parse_op()
+    operands = Regex.scan(~r/\d+|[a-z]+/, expr) |> parse_operands()
+    {wire, parse_connection(op, operands)}
   end
 
-  # creates atom of destination identifier
-  defp parse_dest(dest) do
-    String.to_atom(dest)
-  end
+  # parses the connection
+  defp parse_connection(op, operands)
 
-  # creates atom of operation string
-  defp parse_op(op_matches) do
-    op_matches
-    |> case do
-      nil -> :EQUAL
-      [op] -> String.to_atom(op)
-    end
-  end
+  # for :SIGNAL and :WIRE connections
+  defp parse_connection(nil, [operand]), do: operand
+
+  # for unary connections :NOT
+  defp parse_connection(op, [a]), do: {op, a}
+
+  # for binary connections :AND, :OR, :LSHIFT and :RSHIFT
+  defp parse_connection(op, [a, b]), do: {op, a, b}
+
+  # creates atom of operation match results
+  defp parse_op(op_matches)
+  defp parse_op(nil), do: nil
+  defp parse_op([op]), do: String.to_atom(op)
 
   # ensures we have a flat list of integers or identifiers as operands
   defp parse_operands(operand_matches) do
@@ -171,12 +187,12 @@ defmodule Parser do
   defp parse_operand(operand) do
     Integer.parse(operand)
     |> case do
-      :error -> String.to_atom(operand)
-      {integer, _} -> integer
+      :error -> {:WIRE, String.to_atom(operand)}
+      {integer, _} -> {:SIGNAL, integer}
     end
   end
 end
-````
+```
 
 ## Input
 
@@ -186,25 +202,25 @@ input = Kino.Input.textarea("Please paste your puzzle input:")
 
 ## Part 1
 
-For part 1 we must first parse the instructions and create our Circuit structure. We do this with `Circuit.add_connections/2`. Once we have built the circuit we call `Circuit.get_signal/1` to evaluate the signal on wire `:a`.
-
 ```elixir
 input
 |> Kino.Input.read()
 |> Parser.parse()
-|> Enum.reduce(Circuit.new(), &Circuit.add_connection(&2, &1))
+|> Circuit.build()
 |> Circuit.get_signal(:a)
 ```
 
 ## Part 2
 
-In part 2 we use `Circuit.put_signal/3` to override the signal of `:b`. Once that is done we can call `Circuit.get_signal/1` to once again evaluate wire `:a`.
-
 ```elixir
-input
-|> Kino.Input.read()
-|> Parser.parse()
-|> Enum.reduce(Circuit.new(), &Circuit.add_connection(&2, &1))
-|> then(&Circuit.put_signal(&1, :b, Circuit.get_signal(&1, :a)))
+circuit =
+  Kino.Input.read(input)
+  |> Parser.parse()
+  |> Circuit.build()
+
+a = Circuit.get_signal(circuit, :a)
+
+circuit
+|> Circuit.put_signal(:b, a)
 |> Circuit.get_signal(:a)
 ```
